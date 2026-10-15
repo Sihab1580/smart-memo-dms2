@@ -207,6 +207,24 @@
 .hcd svg{width:72px;height:72px;fill:none;stroke:#1d2a8f;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
 .hcd b{display:block;font-style:italic;font-size:1.05rem;font-weight:500;line-height:1.5;color:#1d2a8f}
 @media (max-width:900px){.hgrid{grid-template-columns:1fr}.welcome h1{margin-top:10px}}
+
+/* ===== Sidebar v2: icon + name + arrow ===== */
+.sidebar{--sidebar-width:216px;width:216px;align-items:stretch;padding-top:14px;overflow:visible}
+.sidebar .nav-item-wrap{flex-direction:row;align-items:center;justify-content:flex-start;gap:14px;padding:12px 18px;margin-bottom:2px}
+.nav-ico{width:26px;height:26px;flex:none;display:grid;place-items:center;color:#2b2f38;filter:drop-shadow(0 2px 2px rgba(15,23,42,.28));transition:color .2s}
+.nav-ico svg{width:24px;height:24px;fill:currentColor}
+.sidebar .nav-label{margin:0;flex:1;text-align:left;font-size:13px;font-weight:500;color:var(--text-dark);white-space:nowrap}
+.nav-chev{flex:none;display:grid;place-items:center;color:#2b2f38}
+.nav-chev svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.sidebar .nav-item-wrap:hover .nav-ico,.sidebar .nav-item-wrap:hover .nav-label,.sidebar .nav-item-wrap:hover .nav-chev{color:var(--primary)}
+.sidebar .nav-submenu-popup{left:100%;top:0;margin-left:2px;width:230px}
+.nav-spacer{flex:1}
+.sidebar .nav-bottom{margin-bottom:6px}
+@media (max-width:900px){
+  .sidebar{--sidebar-width:64px;width:64px}
+  .sidebar .nav-label,.nav-chev{display:none}
+  .sidebar .nav-item-wrap{justify-content:center;padding:12px 0}
+}
 </style>
 </head>
 <body>
@@ -246,64 +264,81 @@
     <div class="layout-container">
         <!-- Professional Sidebar -->
         <div class="sidebar" id="sidebarNav" onclick="closeAllSubmenus(event)">
-            
-            <!-- 1. Reports Menu -->
-            <div class="nav-item-wrap" onclick="toggleSubmenu('reportsSubmenu', event)">
-                <div class="nav-icon">📊</div>
-                <div class="nav-label">Reports</div>
-                
-                <div class="nav-submenu-popup" id="reportsSubmenu">
-                    <div class="nav-submenu-header">Reports & Analytics</div>
-                    <div class="nav-submenu-link" onclick="openOrderUpdateReport()">Order Update Report <span>&gt;</span></div>
-                    <div class="nav-submenu-link" onclick="openReportModal()">Analytics & Stats <span>&gt;</span></div>
-                </div>
-            </div>
 
-            <!-- 2. Setup Menu -->
-            <div class="nav-item-wrap" onclick="toggleSubmenu('setupSubmenu', event)">
-                <div class="nav-icon">🏢</div>
-                <div class="nav-label">Setup</div>
-                
-                <div class="nav-submenu-popup" id="setupSubmenu">
-                    <div class="nav-submenu-header">System Setup</div>
+            <div class="nav-item-wrap" onclick="toggleSubmenu('companySubmenu', event)">
+                <span class="nav-ico"><svg viewBox="0 0 24 24"><path fill-rule="evenodd" d="M3 3h13v5h5v13H3z M5 5h3v3H5z M10 5h3v3h-3z M5 10h3v3H5z M10 10h3v3h-3z M5 15h3v3H5z M10 15h3v3h-3z M16 10h3v3h-3z M16 15h3v3h-3z"/></svg></span>
+                <span class="nav-label">Company setup</span>
+                <span class="nav-chev"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></span>
+                <div class="nav-submenu-popup" id="companySubmenu" onclick="event.stopPropagation(); closeAllSubmenus();">
+                    <div class="nav-submenu-header">Company Setup</div>
+                    <div class="nav-submenu-link" onclick="checkSettingsAccess()">System Settings <span>&gt;</span></div>
                     <div class="nav-submenu-link" onclick="openDeveloperModal()">Developer Setup <span>&gt;</span></div>
                 </div>
             </div>
 
-            <!-- 3. Settings Menu -->
-            <div class="nav-item-wrap" onclick="checkSettingsAccess()">
-                <div class="nav-icon">⚙</div>
-                <div class="nav-label">Settings</div>
+            <div class="nav-item-wrap" onclick="toggleSubmenu('distributorSubmenu', event)">
+                <span class="nav-ico"><svg viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5 2.5 7v14.5h19V7z M7 11h10v2H7z M7 14.2h10v2H7z M7 17.4h10v2H7z"/></svg></span>
+                <span class="nav-label">Distributor Setup</span>
+                <span class="nav-chev"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></span>
+                <div class="nav-submenu-popup" id="distributorSubmenu" onclick="event.stopPropagation(); closeAllSubmenus();">
+                    <div class="nav-submenu-header">Distributor Setup</div>
+                    <div class="nav-submenu-link" onclick="openMaster()">Master Data (DM &amp; Outlet) <span>&gt;</span></div>
+                </div>
             </div>
 
-            <!-- 4. Account Menu -->
-            <div class="nav-item-wrap" onclick="openBillingModal()">
-                <div class="nav-icon" style="color:#10b981;">💳</div>
-                <div class="nav-label">Account</div>
+            <div class="nav-item-wrap" onclick="toggleSubmenu('reportsSubmenu', event)">
+                <span class="nav-ico"><svg viewBox="0 0 24 24"><path fill-rule="evenodd" d="M5 2h9l5 5v15H5z M8 13h2v6H8z M11.5 10h2v9h-2z M15 15h2v4h-2z"/></svg></span>
+                <span class="nav-label">Reports</span>
+                <span class="nav-chev"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></span>
+                <div class="nav-submenu-popup" id="reportsSubmenu" onclick="event.stopPropagation(); closeAllSubmenus();">
+                    <div class="nav-submenu-header">Reports &amp; Analytics</div>
+                    <div class="nav-submenu-link" onclick="openOrderUpdateReport()">Order Update Report <span>&gt;</span></div>
+                    <div class="nav-submenu-link" onclick="openReportModal()">Analytics &amp; Stats <span>&gt;</span></div>
+                </div>
             </div>
 
-            <!-- Master Data Menu -->
-            <div class="nav-item-wrap" onclick="openMaster()">
-                <div class="nav-icon" style="color:#0f766e;">📇</div>
-                <div class="nav-label">Master Data</div>
+            <div class="nav-item-wrap" onclick="toggleSubmenu('transactionSubmenu', event)">
+                <span class="nav-ico"><svg viewBox="0 0 24 24"><path d="M3 5h12V2l6 5-6 5V9H3z M21 15H9v-3l-6 5 6 5v-3h12z"/></svg></span>
+                <span class="nav-label">Transaction</span>
+                <span class="nav-chev"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></span>
+                <div class="nav-submenu-popup" id="transactionSubmenu" onclick="event.stopPropagation(); closeAllSubmenus();">
+                    <div class="nav-submenu-header">Transaction</div>
+                    <div class="nav-submenu-link" onclick="openMemoProcessingQueue()">Memo Processing Queue <span>&gt;</span></div>
+                    <div class="nav-submenu-link" onclick="openBillingModal()">Account &amp; Billing <span>&gt;</span></div>
+                </div>
             </div>
 
-            <!-- 5. Reload Menu -->
-            <div class="nav-item-wrap" onclick="location.reload()">
-                <div class="nav-icon">⟳</div>
-                <div class="nav-label">Reload</div>
+            <div class="nav-item-wrap" onclick="toggleSubmenu('incentiveSubmenu', event)">
+                <span class="nav-ico"><svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg></span>
+                <span class="nav-label">Incentive</span>
+                <span class="nav-chev"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></span>
+                <div class="nav-submenu-popup" id="incentiveSubmenu" onclick="event.stopPropagation(); closeAllSubmenus();">
+                    <div class="nav-submenu-header">Incentive</div>
+                    <div class="nav-submenu-link" onclick="alert('Incentive module is coming soon.')">Incentive Setup (Coming Soon) <span>&gt;</span></div>
+                </div>
             </div>
 
-            <!-- 6. Memo Skipper Tool Button -->
-            <div class="nav-item-wrap" onclick="openMemoProcessingQueue()">
-                <div class="nav-icon" style="color:var(--danger); background:var(--danger-bg);">⚡</div>
-                <div class="nav-label">Skipper</div>
+            <div class="nav-item-wrap" onclick="toggleSubmenu('printSubmenu', event)">
+                <span class="nav-ico"><svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg></span>
+                <span class="nav-label">Print</span>
+                <span class="nav-chev"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></span>
+                <div class="nav-submenu-popup" id="printSubmenu" onclick="event.stopPropagation(); closeAllSubmenus();">
+                    <div class="nav-submenu-header">Print</div>
+                    <div class="nav-submenu-link" onclick="checkSettingsAccess()">Print Settings <span>&gt;</span></div>
+                    <div class="nav-submenu-link" onclick="openMemoProcessingQueue()">Memo Processing &amp; Print <span>&gt;</span></div>
+                </div>
             </div>
 
-            <!-- 7. Developer Profile Menu -->
-            <div class="nav-item-wrap" onclick="openDeveloperModal()">
-                <div class="nav-icon" style="color:var(--primary); background:var(--primary-light);">👨‍💻</div>
-                <div class="nav-label">Developer</div>
+            <div class="nav-spacer"></div>
+
+            <div class="nav-item-wrap nav-bottom" onclick="location.reload()">
+                <span class="nav-ico"><svg viewBox="0 0 24 24"><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg></span>
+                <span class="nav-label">Reload</span>
+            </div>
+
+            <div class="nav-item-wrap nav-bottom" onclick="openDeveloperModal()">
+                <span class="nav-ico"><svg viewBox="0 0 24 24"><path d="M9.4 16.6 4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0 4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg></span>
+                <span class="nav-label">Developer</span>
             </div>
 
         </div>
