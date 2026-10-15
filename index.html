@@ -1,0 +1,1683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Memo DMS | Commercial MDM</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- PDF.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <!-- pdf-lib Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+
+    <!-- Firebase Cloud SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.10.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.10.0/firebase-auth-compat.js"></script>
+
+    <style>
+        :root {
+            --primary: #2a3fd0;
+            --primary-dark: #1f2fa8;
+            --primary-light: #e4e9ff;
+            --success: #10b981;
+            --success-bg: #ecfdf5;
+            --danger: #ef4444;
+            --danger-bg: #fef2f2;
+            --warning: #f59e0b;
+            --warning-bg: #fffbeb;
+            --bg-main: #f8fafc;
+            --card-bg: #ffffff;
+            --text-dark: #1e293b;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --sidebar-width: 88px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
+        html, body { width: 100%; height: 100%; overflow: hidden; background-color: var(--bg-main); color: var(--text-dark); font-size: 13px; }
+
+        /* Login Screen Styles */
+        #loginScreen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: linear-gradient(160deg, #012a86 0%, #1b4cc0 55%, #2f62d2 100%);
+            display: flex; justify-content: center; align-items: center; z-index: 9999;
+        }
+        .login-box {
+            background: white; padding: 40px; border-radius: 16px; width: 100%; max-width: 400px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 10px 10px -5px rgba(0, 0, 0, 0.04); text-align: center;
+        }
+        .login-box h2 { color: var(--primary); margin-bottom: 8px; font-size: 24px; font-weight: 700; }
+        .login-box p { color: var(--text-muted); margin-bottom: 25px; font-size: 13px; }
+        .login-input { width: 100%; padding: 12px 16px; margin-bottom: 16px; border: 1.5px solid var(--border-color); border-radius: 8px; font-size: 14px; outline: none; transition: all 0.2s;}
+        .login-input:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1); }
+        .btn-login { width: 100%; background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+        .btn-login:hover { background: var(--primary-dark); }
+        .btn-login:disabled { background: #93c5fd; cursor: not-allowed; }
+        #loginMsg { margin-top: 15px; font-size: 13px; font-weight: 600; min-height: 20px; }
+        .dev-credit { margin-top: 25px; font-size: 11px; color: #94a3b8; }
+
+        #appScreen { display: none; width: 100%; height: 100%; }
+
+        /* Top Navigation */
+        .topbar-1 { background: #1b2bb5; color: #cdd5ff; height: 26px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; font-size: 11px; letter-spacing: 0.5px; font-weight: 600; }
+        .topbar-2 { background: #2536c9; color: #fff; height: 55px; display: flex; justify-content: space-between; align-items: center; padding: 0 24px; font-size: 14px; font-weight: 700; border-bottom: none; box-shadow: 0 2px 6px rgba(20,30,120,0.25); position: relative; z-index: 10; }
+        .layout-container { display: flex; height: calc(100vh - 81px); width: 100%; overflow: hidden; }
+
+        /* Modern Sidebar */
+        .sidebar { width: var(--sidebar-width); background: white; border-right: 1px solid var(--border-color); display: flex; flex-direction: column; align-items: center; padding-top: 20px; z-index: 5; position: relative; overflow: hidden; flex-shrink: 0; }
+        
+        .nav-item-wrap { width: 100%; display: flex; flex-direction: column; align-items: center; margin-bottom: 16px; cursor: pointer; padding: 8px 4px; transition: 0.2s; position: relative; }
+        .nav-item-wrap:hover { background: var(--primary-light); }
+        .nav-icon { width: 44px; height: 44px; display: flex; justify-content: center; align-items: center; border-radius: 12px; color: var(--primary); font-size: 20px; font-weight: bold; background: #f8fafc; border: 1px solid var(--border-color); box-shadow: 0 2px 4px rgba(0,0,0,0.02); transition: all 0.2s; }
+        .nav-item-wrap:hover .nav-icon { background: white; border-color: var(--primary); }
+        .nav-label { font-size: 11px; font-weight: 600; color: var(--text-muted); margin-top: 6px; text-align: center; }
+        .nav-item-wrap:hover .nav-label { color: var(--primary); }
+
+        /* Submenu Popover Panel */
+        .nav-submenu-popup {
+            display: none; position: absolute; left: var(--sidebar-width); top: 0; width: 220px; 
+            background: white; border: 1px solid var(--border-color); border-radius: 12px;
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); z-index: 1000; animation: slideIn 0.2s ease-in-out; overflow: hidden;
+        }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(-5px); } to { opacity: 1; transform: translateX(0); } }
+        .nav-submenu-header { font-size: 12px; font-weight: 700; background: #f8fafc; padding: 12px 16px; border-bottom: 1px solid var(--border-color); color: var(--text-dark); }
+        .nav-submenu-link { padding: 12px 16px; font-size: 13px; font-weight: 500; color: var(--text-muted); cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; transition: 0.15s; }
+        .nav-submenu-link:hover { background: var(--primary-light); color: var(--primary); font-weight: 600; }
+
+        /* Main Area */
+        .main-content { flex: 1; padding: 30px; overflow-y: auto; overflow-x: hidden; background: var(--bg-main); display: flex; flex-direction: column; height: 100%; }
+        #welcomeDashboard { display: flex; justify-content: center; align-items: center; text-align: center; width: 100%; height: 100%; }
+        .welcome-title { color: var(--primary); font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
+
+        /* Order Update Report Table Styling */
+        .report-container { display: none; background: white; padding: 24px; border-radius: 16px; border: 1px solid var(--border-color); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); width: 100%; animation: smoothFadeIn 0.3s ease-in-out; }
+        .report-header-title { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid var(--bg-main); padding-bottom: 12px; }
+        .report-table { width: 100%; border-collapse: collapse; text-align: center; font-size: 12px; }
+        .report-table th { background: #f8fafc; color: var(--text-dark); padding: 10px; border: 1px solid var(--border-color); font-weight: 600; }
+        .report-table td { padding: 8px 10px; border: 1px solid var(--border-color); color: var(--text-dark); }
+        .report-table tr:hover { background: #f8fafc; }
+        .target-input { width: 75px; padding: 6px; text-align: center; border: 1px solid var(--border-color); border-radius: 6px; font-weight: 600; font-size: 12px; outline: none; }
+        .target-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); }
+
+        /* Upload Panel */
+        .filter-panel { display: none; background: white; border: 1px solid var(--border-color); padding: 24px; margin-bottom: 24px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); width: 100%; animation: smoothFadeIn 0.3s ease-in-out; }
+        @keyframes smoothFadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .filter-panel-title { font-size: 15px; font-weight: 700; color: var(--text-dark); margin-bottom: 16px; }
+        .filter-grid { display: flex; gap: 20px; align-items: flex-end; }
+        .form-group { display: flex; flex-direction: column; gap: 6px; flex: 1; }
+        .form-group label { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+        .form-control { border: 1.5px solid var(--border-color); padding: 10px 14px; font-size: 13px; border-radius: 8px; outline: none; width: 100%; transition: border-color 0.2s; }
+        .form-control:focus { border-color: var(--primary); }
+        .drop-zone { border: 2px dashed #cbd5e1; background: #f8fafc; padding: 20px; text-align: center; border-radius: 10px; cursor: pointer; font-size: 13px; color: var(--primary); font-weight: 600; transition: all 0.2s; }
+        .drop-zone:hover { background: var(--primary-light); border-color: var(--primary); }
+        
+        /* Buttons */
+        .btn-action { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; transition: background 0.2s; }
+        .btn-action:hover { background: var(--primary-dark); }
+        .btn-secondary { background: #f1f5f9; color: var(--text-dark); border: 1px solid var(--border-color); padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.2s; }
+        .btn-secondary:hover { background: #e2e8f0; }
+
+        /* Modern Accordion & Cards */
+        .dm-section { margin-bottom: 20px; background: white; border: 1px solid var(--border-color); border-radius: 14px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); width: 100%; overflow: hidden; animation: smoothFadeIn 0.3s ease-in-out; }
+        .dm-header-wrap { padding: 18px 24px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: white; transition: background 0.2s; }
+        .dm-header-wrap:hover { background: #f8fafc; }
+        .dm-title { font-size: 16px; font-weight: 700; color: var(--text-dark); margin-bottom: 10px; }
+        
+        .stat-row { display: flex; gap: 10px; font-size: 12px; flex-wrap: wrap; }
+        .stat-pill { background: #f1f5f9; padding: 5px 12px; border-radius: 20px; font-weight: 600; color: var(--text-dark); border: 1px solid var(--border-color); display: flex; align-items: center; gap: 6px; }
+        .stat-pill.valid { background: var(--success-bg); color: var(--success); border-color: #a7f3d0; }
+        .stat-pill.damage { background: #e0f2fe; color: #0369a1; border-color: #bae6fd; }
+        .stat-pill.payout { background: var(--warning-bg); color: #b45309; border-color: #fde68a; }
+        .stat-pill.skip { background: var(--danger-bg); color: var(--danger); border-color: #fecaca; }
+
+        /* Modernized Data Table Styles */
+        .modern-table-container { background: white; border-radius: 12px; overflow: hidden; border: 1px solid var(--border-color); box-shadow: 0 2px 4px rgba(0,0,0,0.01); }
+        .modern-table-toolbar { padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; background: #fcfcfc; border-bottom: 1px solid var(--border-color); }
+        .modern-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
+        .modern-table th { background: #f8fafc; color: var(--text-muted); font-weight: 600; padding: 12px 16px; border-bottom: 1px solid var(--border-color); letter-spacing: 0.3px; text-transform: uppercase; font-size: 11px; }
+        .modern-table td { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; color: var(--text-dark); vertical-align: middle; }
+        .modern-table tr:last-child td { border-bottom: none; }
+        .modern-table tr:hover { background: #f8fafc; }
+        
+        .status-badge { padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; white-space: nowrap; display: inline-flex; align-items: center; gap: 5px; }
+        .status-selected { background: var(--success-bg); color: var(--success); }
+        .status-dropped { background: var(--danger-bg); color: var(--danger); }
+        .status-damage { background: #e0f2fe; color: #0369a1; }
+        .status-payout { background: var(--warning-bg); color: #b45309; border: 1px solid #fde68a; }
+        
+        .checkbox-custom { accent-color: var(--primary); width: 16px; height: 16px; cursor: pointer; border-radius: 4px; }
+        
+        /* Modern Tab Switching for Valid & Skipped Memos */
+        .tab-nav { display: flex; gap: 8px; border-bottom: 1px solid var(--border-color); padding: 0 20px; background: #f8fafc; }
+        .tab-btn { padding: 14px 20px; background: none; border: none; font-weight: 600; font-size: 13px; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; }
+        .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); background: white; }
+        .tab-content { display: none; padding: 20px; }
+        .tab-content.active { display: block; }
+
+        /* Tom & Jerry Chase Live Loading Screen */
+        #loading { display: none; text-align: center; margin: 60px 0; width: 100%; animation: smoothFadeIn 0.3s ease-in-out; }
+        .loading-card { background: white; max-width: 450px; margin: 0 auto; padding: 35px; border-radius: 16px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); border-top: 4px solid var(--primary); text-align: center; }
+        
+        .chase-container { position: relative; width: 100%; height: 70px; margin: 20px 0; background: #f8fafc; border-radius: 10px; overflow: hidden; border: 1px dashed var(--border-color); }
+        .runner { position: absolute; top: 18px; font-size: 28px; animation: runChase 2s linear infinite; }
+        #jerry { animation-delay: 0s; }
+        #tom { animation-delay: 0.1s; font-size: 32px; }
+        @keyframes runChase { 0% { left: -40px; } 100% { left: 420px; } }
+
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 1000; justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 30px; border-radius: 16px; width: 95%; max-width: 850px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.15); max-height: 90vh; overflow-y: auto; }
+        .modal-header { font-size: 18px; font-weight: 700; color: var(--text-dark); margin-bottom: 20px; display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 14px; align-items: center; }
+        .close-btn { background: #f1f5f9; border: none; width: 32px; height: 32px; border-radius: 50%; font-size: 16px; cursor: pointer; color: var(--text-muted); display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+        .close-btn:hover { background: #e2e8f0; color: var(--text-dark); }
+
+        /* Settings Submenu Styling */
+        .settings-tab-nav { display: flex; gap: 8px; border-bottom: 1px solid var(--border-color); margin-bottom: 20px; flex-wrap: wrap; }
+        .settings-tab-btn { padding: 10px 16px; background: #f1f5f9; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px; color: var(--text-muted); transition: all 0.2s; }
+        .settings-tab-btn.active { background: var(--primary); color: white; }
+        .settings-tab-content { display: none; }
+        .settings-tab-content.active { display: block; }
+    
+/* ===== DCODE-style home design ===== */
+.topbar-2 #liveClock{color:#dbe2ff !important}
+.topbar-2 > div:first-child{color:#fff !important;letter-spacing:.14em}
+.sidebar{--sidebar-width:78px;width:78px}
+.nav-submenu-popup{left:78px}
+#welcomeDashboard{align-items:stretch;justify-content:stretch;text-align:left}
+.hgrid{flex:1;display:grid;grid-template-columns:minmax(260px,34%) 1fr;border-radius:14px;overflow:hidden;border:1px solid var(--border-color);min-height:520px;background:#fff}
+.welcome{background:linear-gradient(180deg,#012a86 0%,#1b4cc0 55%,#2f62d2 100%);color:#fff;padding:36px 28px;display:flex;flex-direction:column;justify-content:space-between;gap:30px}
+.welcome h1{font-size:clamp(1.8rem,3.2vw,2.8rem);line-height:1.2;margin:40px 0 14px;font-weight:700;letter-spacing:.01em}
+.welcome p.s{font-size:clamp(1rem,1.5vw,1.3rem);font-weight:500;margin:0;line-height:1.5}
+.navhint{display:flex;align-items:center;gap:14px;font-style:italic;font-size:1.05rem}
+.navhint svg{width:40px;height:40px;flex:none}
+.hright{display:flex;flex-direction:column;min-width:0}
+.hlogo{background:#edf1f9;padding:34px 16px;text-align:center}
+.hlogo svg{width:130px;height:130px}
+.hlogo h2{margin:6px 0 2px;font-size:clamp(2rem,4vw,3.1rem);letter-spacing:.04em;font-weight:700;font-style:italic;color:#1d2a8f}
+.hlogo p{margin:0;font-style:italic;font-weight:500;color:#1d2a8f;font-size:clamp(.95rem,1.6vw,1.25rem)}
+.hcards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:18px;padding:28px 20px 30px;background:#fff}
+.hcd{text-align:center}
+.hcd .o{width:150px;height:150px;border-radius:50%;background:#b9dcff;margin:0 auto 14px;display:grid;place-items:center}
+.hcd svg{width:72px;height:72px;fill:none;stroke:#1d2a8f;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.hcd b{display:block;font-style:italic;font-size:1.05rem;font-weight:500;line-height:1.5;color:#1d2a8f}
+@media (max-width:900px){.hgrid{grid-template-columns:1fr}.welcome h1{margin-top:10px}}
+</style>
+</head>
+<body>
+
+<!-- Subscription Login Screen -->
+<div id="loginScreen">
+    <div class="login-box">
+        <h2>S-SMART TECHNOLOGIES</h2>
+        <p>Commercial MDM System Authentication</p>
+        
+        <input type="text" id="loginUser" class="login-input" placeholder="User ID / License Key">
+        <input type="password" id="loginPass" class="login-input" placeholder="Password">
+        
+        <button id="loginBtn" class="btn-login" onclick="verifySubscription()">Log In</button>
+        
+        <div id="loginMsg"></div>
+        <div class="dev-credit">Software Developed by: Khairul Hasan Shihab</div>
+    </div>
+</div>
+
+<!-- Main Application Screen -->
+<div id="appScreen">
+    <div class="topbar-1">
+        <div style="font-size: 11px;">S-SMART TECHNOLOGIES</div>
+        <div>Smart Memo MDM | <span id="displayHouseName" style="color:#a5b4fc;"></span></div>
+    </div>
+    <div class="topbar-2">
+        <div style="font-weight: 700; color: var(--text-dark);">BACKOFFICE DASHBOARD</div>
+        <div style="font-weight: 500; font-size: 13px; display: flex; align-items: center; gap:16px;">
+            <span id="subRemaining" style="color: var(--primary); font-weight: 700; background: var(--primary-light); padding: 4px 10px; border-radius: 20px;"></span>
+            <span id="liveClock" style="color: var(--text-muted);">Loading Time...</span>
+            <span style="color: var(--border-color);">|</span>
+            <span onclick="logoutSystem()" style="cursor: pointer; background: var(--danger-bg); color: var(--danger); padding: 6px 14px; border-radius: 8px; font-weight: 600; transition: 0.2s;" onmouseover="this.style.background='#fee2e2'" onmouseout="this.style.background='#fef2f2'">Logout 🔒</span>
+        </div>
+    </div>
+
+    <div class="layout-container">
+        <!-- Professional Sidebar -->
+        <div class="sidebar" id="sidebarNav" onclick="closeAllSubmenus(event)">
+            
+            <!-- 1. Reports Menu -->
+            <div class="nav-item-wrap" onclick="toggleSubmenu('reportsSubmenu', event)">
+                <div class="nav-icon">📊</div>
+                <div class="nav-label">Reports</div>
+                
+                <div class="nav-submenu-popup" id="reportsSubmenu">
+                    <div class="nav-submenu-header">Reports & Analytics</div>
+                    <div class="nav-submenu-link" onclick="openOrderUpdateReport()">Order Update Report <span>&gt;</span></div>
+                    <div class="nav-submenu-link" onclick="openReportModal()">Analytics & Stats <span>&gt;</span></div>
+                </div>
+            </div>
+
+            <!-- 2. Setup Menu -->
+            <div class="nav-item-wrap" onclick="toggleSubmenu('setupSubmenu', event)">
+                <div class="nav-icon">🏢</div>
+                <div class="nav-label">Setup</div>
+                
+                <div class="nav-submenu-popup" id="setupSubmenu">
+                    <div class="nav-submenu-header">System Setup</div>
+                    <div class="nav-submenu-link" onclick="openDeveloperModal()">Developer Setup <span>&gt;</span></div>
+                </div>
+            </div>
+
+            <!-- 3. Settings Menu -->
+            <div class="nav-item-wrap" onclick="checkSettingsAccess()">
+                <div class="nav-icon">⚙</div>
+                <div class="nav-label">Settings</div>
+            </div>
+
+            <!-- 4. Account Menu -->
+            <div class="nav-item-wrap" onclick="openBillingModal()">
+                <div class="nav-icon" style="color:#10b981;">💳</div>
+                <div class="nav-label">Account</div>
+            </div>
+
+            <!-- Master Data Menu -->
+            <div class="nav-item-wrap" onclick="openMaster()">
+                <div class="nav-icon" style="color:#0f766e;">📇</div>
+                <div class="nav-label">Master Data</div>
+            </div>
+
+            <!-- 5. Reload Menu -->
+            <div class="nav-item-wrap" onclick="location.reload()">
+                <div class="nav-icon">⟳</div>
+                <div class="nav-label">Reload</div>
+            </div>
+
+            <!-- 6. Memo Skipper Tool Button -->
+            <div class="nav-item-wrap" onclick="openMemoProcessingQueue()">
+                <div class="nav-icon" style="color:var(--danger); background:var(--danger-bg);">⚡</div>
+                <div class="nav-label">Skipper</div>
+            </div>
+
+            <!-- 7. Developer Profile Menu -->
+            <div class="nav-item-wrap" onclick="openDeveloperModal()">
+                <div class="nav-icon" style="color:var(--primary); background:var(--primary-light);">👨‍💻</div>
+                <div class="nav-label">Developer</div>
+            </div>
+
+        </div>
+
+        <div class="main-content">
+            <div id="welcomeDashboard">
+                <div class="hgrid">
+                    <div class="welcome">
+                        <div>
+                            <h1>WELCOME TO<br>SMART MEMO MDM!</h1>
+                            <p class="s">YOUR GATEWAY TO FASTER, ERROR-FREE MEMO PROCESSING</p>
+                        </div>
+                        <div class="navhint"><svg viewBox="0 0 48 48"><path d="M36 8L12 24l24 16z" fill="#9fd0ff"/></svg><span>Navigate to the menu on the left to get started!</span></div>
+                    </div>
+                    <div class="hright">
+                        <div class="hlogo">
+                            <svg viewBox="0 0 140 140"><rect x="22" y="14" width="96" height="112" rx="18" fill="#2a3fd0"/><path d="M40 36h60v70l-10-7-10 7-10-7-10 7-10-7-10 7z" fill="#fff"/><path d="M52 54h36M52 68h36M52 82h20" stroke="#2a3fd0" stroke-width="5" stroke-linecap="round"/><circle cx="104" cy="104" r="16" fill="#ffd34d"/><path d="M97 104l5 5 9-10" stroke="#1d2a8f" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            <h2>S-SMART</h2>
+                            <p>Scan. Filter. Print.</p>
+                        </div>
+                        <div class="hcards">
+                            <div class="hcd"><div class="o"><svg viewBox="0 0 48 48"><path d="M24 32V10M15 19l9-9 9 9"/><path d="M8 32v6h32v-6"/></svg></div><b>Auto-scan memos<br>from PDF files</b></div>
+                            <div class="hcd"><div class="o"><svg viewBox="0 0 48 48"><path d="M6 8h36L28 25v13l-8 4V25z"/></svg></div><b>Smart filter by delivery<br>man &amp; amount</b></div>
+                            <div class="hcd"><div class="o"><svg viewBox="0 0 48 48"><path d="M14 17V6h20v11"/><rect x="6" y="17" width="36" height="16" rx="3"/><path d="M14 27h20v15H14z"/></svg></div><b>One-click stitched<br>memo printing</b></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upload Panel -->
+            <div class="filter-panel" id="uploadPanel">
+                <div class="filter-panel-title">Upload PDF Files (Memo Processing Queue)</div>
+                <div class="filter-grid">
+                    <div class="form-group" style="flex: 2;">
+                        <div class="drop-zone" id="dropZone" onclick="document.getElementById('pdfInput').click()">
+                            📁 Click here or Drag & Drop PDF files (e.g. 7.pdf, 86.pdf)
+                        </div>
+                        <input type="file" id="pdfInput" accept="application/pdf" multiple style="display:none;" onchange="updateFileCount(this.files)">
+                        <div id="fileCount" style="font-size: 12px; color: var(--primary); margin-top: 6px; font-weight:600;"></div>
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <button class="btn-action" onclick="processAllPDFs()" style="height: 44px; width: 100%;">⟳ Scan & Process Memos</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Order Update Report Section Container -->
+            <div class="report-container" id="orderUpdateReportSection">
+                <div class="report-header-title">
+                    <h3 style="color: var(--text-dark); font-size: 18px; font-weight: 700;">📈 Order Update Report</h3>
+                    <div style="font-size: 13px; font-weight: 600; color: var(--text-muted);" id="reportLiveDateTime"></div>
+                </div>
+                <div style="overflow-x: auto;">
+                    <table class="report-table">
+                        <thead>
+                            <tr>
+                                <th>S/SO Name</th>
+                                <th>Today Target</th>
+                                <th>Today Order</th>
+                                <th>Ach %</th>
+                                <th>Balance</th>
+                                <th>MTD-SR %</th>
+                                <th>MTD-LPC</th>
+                                <th>TGT</th>
+                                <th>ACH</th>
+                                <th>Ach%</th>
+                                <th>Balance</th>
+                                <th>RR</th>
+                            </tr>
+                        </thead>
+                        <tbody id="orderUpdateTableBody">
+                            <!-- Dynamic rows will load here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tom & Jerry Loading Screen -->
+            <div id="loading">
+                <div class="loading-card">
+                    <h3 style="color: var(--text-dark); margin-bottom: 6px; font-size: 18px; font-weight: 700;">Processing Memos...</h3>
+                    <p id="loadingText" style="color: var(--text-muted); font-size: 13px;">Scanning files & matching MDM</p>
+                    
+                    <div class="chase-container">
+                        <div class="runner" id="jerry">🐭</div>
+                        <div class="runner" id="tom">🐱</div>
+                    </div>
+                    <div style="font-size: 12px; color: var(--text-muted); font-style: italic;">Tom is chasing Jerry through the database! 🏃‍♂️💨</div>
+                </div>
+            </div>
+            
+            <div id="resultsContainer"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Nemo AI Smart Assistant Chatbot Widget -->
+<div id="nemoChatWidget" style="display:none; position: fixed; bottom: 55px; right: 25px; width: 280px; height: 420px; background: white; border: 1px solid var(--border-color); border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); z-index: 999; flex-direction: column; overflow: hidden;">
+    <div style="background: var(--primary); color: white; padding: 12px 16px; font-size: 13px; font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
+        <span>🤖 Nemo Assistant</span>
+        <span style="cursor: pointer; font-size: 14px;" onclick="toggleNemoMinimize()">_</span>
+    </div>
+    <div id="nemoChatBody" style="flex: 1; padding: 14px; overflow-y: auto; font-size: 12px; background: #f8fafc; display: flex; flex-direction: column; gap: 10px;">
+        <div style="background: var(--primary-light); color: var(--primary-dark); padding: 8px 12px; border-radius: 8px; max-width: 90%;">Hello! I am Nemo, your Smart Assistant. How can I help you today?</div>
+    </div>
+    <div style="padding: 12px; background: white; border-top: 1px solid var(--border-color); display: flex; gap: 8px;">
+        <input type="text" id="nemoInput" style="flex: 1; border: 1px solid var(--border-color); padding: 8px 12px; font-size: 12px; border-radius: 6px; outline: none;" placeholder="Type here..." onkeypress="if(event.key==='Enter') sendNemoMsg()">
+        <button style="background: var(--primary); color: white; border: none; padding: 8px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: 600;" onclick="sendNemoMsg()">Send</button>
+    </div>
+</div>
+
+<!-- Special Developer Details Modal -->
+<div class="modal-overlay" id="developerModal">
+    <div class="modal-content" style="max-width: 440px; text-align: center;">
+        <div class="modal-header">
+            <span>👨‍💻 Developer Profile</span>
+            <button class="close-btn" onclick="closeDeveloperModal()">&times;</button>
+        </div>
+        <div style="padding: 10px 0;">
+            <div style="width: 85px; height: 85px; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; font-size: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; margin: 0 auto 16px auto; font-weight: bold; box-shadow: 0 8px 16px rgba(79,70,229,0.25);">KS</div>
+            <h2 style="color: var(--text-dark); font-size: 20px; font-weight: 700; margin-bottom: 4px;">Khairul Hasan Shihab</h2>
+            <div style="color: var(--primary); font-weight: 600; font-size: 13px; margin-bottom: 20px;">IT Support Specialist & Software Developer</div>
+            <div style="text-align: left; font-size: 13px; color: var(--text-dark); display: flex; flex-direction: column; gap: 12px; background: #f8fafc; padding: 18px; border-radius: 12px; border: 1px solid var(--border-color);">
+                <div>📞 <b>Primary Phone:</b> <a href="tel:01580441506" style="color:var(--primary); text-decoration:none;">01580-441506</a></div>
+                <div>📱 <b>Alternative Phone:</b> <a href="tel:01410441506" style="color:var(--primary); text-decoration:none;">01410-441506</a></div>
+                <div>📧 <b>Email:</b> khairulhasansihab@gmail.com</div>
+                <div>🏢 <b>Company:</b> S-SMART TECHNOLOGIES</div>
+            </div>
+        </div>
+        <button class="btn-action" style="width: 100%; margin-top: 20px;" onclick="closeDeveloperModal()">Close</button>
+    </div>
+</div>
+
+<!-- Report Corner Modal -->
+<div class="modal-overlay" id="reportModal">
+    <div class="modal-content" style="max-width: 400px; text-align: center;">
+        <div class="modal-header">
+            <span>📊 Report Corner</span>
+            <button class="close-btn" onclick="closeReportModal()">&times;</button>
+        </div>
+        <div style="padding: 20px 0; color: var(--text-muted);">
+            <div style="font-size: 40px; margin-bottom: 15px;">🚧</div>
+            <h3 style="color: var(--text-dark); margin-bottom: 10px; font-weight: 700;">Coming Soon!</h3>
+            <p>Advanced reporting features, analytics, and business insights will be available here soon.</p>
+        </div>
+        <button class="btn-action" style="width: 100%; margin-top: 15px;" onclick="closeReportModal()">Close</button>
+    </div>
+</div>
+
+<!-- Password Modal -->
+<div class="modal-overlay" id="passwordModal">
+    <div class="modal-content" style="max-width: 360px; text-align: center;">
+        <div class="modal-header"><span>🔒 Security Check</span><button class="close-btn" onclick="closePasswordModal()">&times;</button></div>
+        <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 20px;">This area is locked. Enter Super Admin password to access.</p>
+        <input type="password" id="adminPassword" class="form-control" placeholder="Enter Password" style="margin-bottom: 20px; text-align: center; letter-spacing: 2px;" onkeypress="if(event.key === 'Enter') verifySettingsPassword()">
+        <button class="btn-action" style="width: 100%;" onclick="verifySettingsPassword()">Submit</button>
+    </div>
+</div>
+
+<!-- Account & Subscription Hub Modal -->
+<div class="modal-overlay" id="billingModal">
+    <div class="modal-content" style="max-width: 900px;">
+        <div class="modal-header">
+            <span>💳 Account & Subscription Hub (Super Admin Only)</span>
+            <button class="close-btn" onclick="closeBillingModal()">&times;</button>
+        </div>
+
+        <div class="settings-tab-nav">
+            <button class="settings-tab-btn active" onclick="switchBillingTab(event, 'billTabStatus')">⏳ Client Validity Status</button>
+            <button class="settings-tab-btn" onclick="switchBillingTab(event, 'billTabExtend')">➕ Extend / Reduce Days</button>
+            <button class="settings-tab-btn" onclick="switchBillingTab(event, 'billTabLedger')">💰 Payment & Ledger</button>
+            <button class="settings-tab-btn" onclick="switchBillingTab(event, 'billTabReports')">📊 Financial Reports</button>
+        </div>
+
+        <div id="billTabStatus" class="settings-tab-content active">
+            <div style="background: #f8fafc; padding: 20px; border: 1px solid var(--border-color); border-radius: 12px;">
+                <div style="font-size: 14px; font-weight: 700; color: var(--text-dark); margin-bottom: 14px;">Active Clients & Expiry Status Overview</div>
+                <div style="max-height: 250px; overflow-y: auto;">
+                    <table style="width: 100%; text-align: left; font-size: 13px;">
+                        <thead><tr style="border-bottom: 1px solid var(--border-color);"><th style="padding: 8px;">Client House ID</th><th style="padding: 8px;">Expiry Date</th><th style="padding: 8px;">Status</th></tr></thead>
+                        <tbody id="clientStatusTableBody">
+                            <tr><td style="padding: 8px;">habiganj_house</td><td style="padding: 8px;">2026-11-30</td><td style="padding: 8px;"><span class="status-badge status-selected">Active</span></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="billTabExtend" class="settings-tab-content">
+            <div style="background: var(--primary-light); padding: 20px; border: 1px solid #c7d2fe; border-radius: 12px;">
+                <div style="font-size: 14px; font-weight: 700; color: var(--primary-dark); margin-bottom: 14px;">➕ Modify Subscription Days</div>
+                <div style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
+                    <div class="form-group">
+                        <label>Select Client ID</label>
+                        <select id="billClientSelect" class="form-control">
+                            <option value="habiganj_house">Habiganj House</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Action Type</label>
+                        <select id="billActionType" class="form-control">
+                            <option value="add">Add Days (+)</option>
+                            <option value="reduce">Reduce Days (-)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Days Quantity</label>
+                        <input type="number" id="billDaysInput" class="form-control" placeholder="e.g. 30">
+                    </div>
+                    <button class="btn-action" onclick="updateClientDays()" style="height: 42px;">Apply Changes</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="billTabLedger" class="settings-tab-content">
+            <div style="background: #f8fafc; padding: 20px; border: 1px solid var(--border-color); border-radius: 12px;">
+                <div style="font-size: 14px; font-weight: 700; color: var(--text-dark); margin-bottom: 14px;">💰 Record Payment & Dues Ledger</div>
+                <div style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 15px;">
+                    <div class="form-group"><label>Client Name</label><input type="text" id="ledgerClient" class="form-control" placeholder="House Name"></div>
+                    <div class="form-group"><label>Paid Amount (BDT)</label><input type="number" id="ledgerPaid" class="form-control" placeholder="Amount"></div>
+                    <div class="form-group"><label>Due Amount (BDT)</label><input type="number" id="ledgerDue" class="form-control" placeholder="Due"></div>
+                    <button class="btn-action" onclick="saveLedgerRecord()" style="height: 42px; background: #10b981;">Save Ledger</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="billTabReports" class="settings-tab-content">
+            <div style="background: var(--success-bg); padding: 20px; border: 1px solid #a7f3d0; border-radius: 12px; text-align: center;">
+                <div style="font-size: 16px; font-weight: 700; color: #065f46; margin-bottom: 10px;">📊 Total Revenue Summary</div>
+                <div style="font-size: 24px; font-weight: bold; color: #047857;">৳ 25,000</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Settings & Admin Modal -->
+<div class="modal-overlay" id="settingsModal">
+    <div class="modal-content" style="max-width: 850px;">
+        <div class="modal-header">
+            <span>⚙ Admin Control Center</span>
+            <button class="close-btn" onclick="closeSettings()">&times;</button>
+        </div>
+
+        <div class="settings-tab-nav" id="adminTabsNav">
+            <button class="settings-tab-btn active" onclick="switchSettingsTab(event, 'tabConfig')">⚙ System Config</button>
+            <button class="settings-tab-btn" onclick="switchSettingsTab(event, 'tabClientMgmt')">🏢 Clients & Access Control</button>
+            <button class="settings-tab-btn" onclick="switchSettingsTab(event, 'tabUploadData')">📥 Data Upload Hub</button>
+            <button class="settings-tab-btn" onclick="switchSettingsTab(event, 'tabClients')">☁ Subscription Manager</button>
+        </div>
+
+        <div id="tabConfig" class="settings-tab-content active">
+            <div style="background: #f8fafc; padding: 20px; border: 1px solid var(--border-color); border-radius: 12px;">
+                <div style="font-size: 14px; font-weight: 700; color: var(--text-dark); margin-bottom: 16px;">General System Configuration</div>
+                <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                    <div class="form-group">
+                        <label>House Name</label>
+                        <div style="display:flex; gap:8px;"><input type="text" id="houseNameInput" class="form-control"><button class="btn-action" onclick="saveHouseName()">Save</button></div>
+                    </div>
+                    <div class="form-group">
+                        <label>Target Min Amount (BDT)</label>
+                        <div style="display:flex; gap:8px;"><input type="number" id="minAmountInput" class="form-control"><button class="btn-action" onclick="saveMinAmount()">Save</button></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tabClientMgmt" class="settings-tab-content">
+            <div style="background: var(--success-bg); padding: 20px; border: 1px solid #a7f3d0; border-radius: 12px;">
+                <div style="font-size: 14px; font-weight: 700; color: #065f46; margin-bottom: 6px;">🏢 Client House Management</div>
+                <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">Add new houses or select existing ones to manage.</p>
+                <div style="display: flex; gap: 12px; align-items: flex-end;">
+                    <div class="form-group" style="flex: 2;">
+                        <label>Select Target House</label>
+                        <select id="targetClientSelect" class="form-control" onchange="onHouseDropdownChange(this.value)">
+                            <option value="">-- Choose House --</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex: 2; display: flex; gap: 8px;">
+                        <input type="text" id="newHouseNameInput" class="form-control" placeholder="New House Name">
+                        <button class="btn-action" onclick="addNewHouse()" style="background: #059669; height: 42px;">+ Add</button>
+                    </div>
+                </div>
+            </div>
+            <div style="background:#fff;border:1px solid var(--border-color);border-radius:12px;padding:20px;margin-top:16px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
+                    <div>
+                        <div style="font-size:14px;font-weight:700;color:var(--text-dark);">👥 Users &amp; Access Control</div>
+                        <div style="font-size:12px;color:var(--text-muted);">Every user ID stored in Firebase. Tick the access each user should have, then press Save.</div>
+                    </div>
+                    <div style="display:flex;gap:8px;">
+                        <input type="text" id="userSearch" class="form-control" placeholder="Search user..." style="width:170px;" oninput="renderUsersAdmin()">
+                        <button class="btn-secondary" onclick="loadUsersAdmin()">⟳ Refresh</button>
+                        <button class="btn-secondary" onclick="migrateLegacyUsers()" title="Move old plain-text-password users to Firebase Authentication">⬆ Migrate old users</button>
+                    </div>
+                </div>
+                <div style="overflow-x:auto;max-height:380px;overflow-y:auto;">
+                    <table class="modern-table">
+                        <thead><tr><th>User ID</th><th>Status / Expiry</th><th>Access Permissions</th><th>Actions</th></tr></thead>
+                        <tbody id="usersBody"><tr><td colspan="4" style="padding:24px;text-align:center;color:var(--text-muted);">Press Refresh to load users</td></tr></tbody>
+                    </table>
+                </div>
+                <div id="usersMsg" style="font-size:12px;margin-top:8px;font-weight:600;"></div>
+            </div>
+        </div>
+
+        <div id="tabUploadData" class="settings-tab-content">
+            <div style="background: var(--primary-light); padding: 20px; border: 1px solid #c7d2fe; border-radius: 12px;">
+                <div style="font-size: 14px; font-weight: 700; color: var(--primary-dark); margin-bottom: 12px;">📥 Separate Data Upload Hub</div>
+                <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                    <div class="form-group" style="background: white; padding: 16px; border-radius: 10px; border: 1px solid var(--border-color);">
+                        <label style="font-weight:bold; color:var(--success);">🏬 Outlet Master Data (CSV)</label>
+                        <div style="font-size:12px; color:var(--text-muted); margin-bottom:10px;" id="outletCountDisplay">0 Outlets Loaded</div>
+                        <button class="btn-action" style="background: var(--success);" onclick="document.getElementById('outletCsvInput').click()">📥 Upload Outlet CSV</button>
+                        <input type="file" id="outletCsvInput" accept=".csv" style="display:none;" onchange="uploadOutletCSV(event)">
+                    </div>
+
+                    <div class="form-group" style="background: white; padding: 16px; border-radius: 10px; border: 1px solid var(--border-color); flex: 1;">
+                        <label style="font-weight:bold; color:var(--primary);">👤 Delivery Man List (CSV)</label>
+                        <div style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">Manage Delivery Roster</div>
+                        <button class="btn-action" onclick="document.getElementById('dmCsvInput').click()">📥 Upload DM CSV</button>
+                        <input type="file" id="dmCsvInput" accept=".csv" style="display:none;" onchange="uploadDMCSV(event)">
+                    </div>
+                </div>
+
+                <div style="max-height: 140px; overflow-y: auto; border: 1px solid var(--border-color); background: white; margin-top: 15px; border-radius: 8px;">
+                    <table style="width: 100%; text-align: left; font-size: 12px;">
+                        <thead style="position: sticky; top: 0; background: #f8fafc;"><tr><th style="padding: 8px;">Code</th><th style="padding: 8px;">Name</th></tr></thead>
+                        <tbody id="dmListBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="tabClients" class="settings-tab-content">
+            <div style="background: #f8fafc; padding: 20px; border: 1px solid var(--border-color); border-radius: 12px;">
+                <div style="font-size: 14px; font-weight: 700; color: var(--text-dark); margin-bottom: 14px;">☁ New Client ID Creation</div>
+                <div style="display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;">
+                    <div class="form-group"><label>Client User ID</label><input type="text" id="newSubUser" class="form-control" placeholder="User ID"></div>
+                    <div class="form-group"><label>Password</label><input type="password" id="newSubPass" class="form-control" placeholder="Password"></div>
+                    <div class="form-group"><label>Expiry Date</label><input type="date" id="newSubExpiry" class="form-control"></div>
+                    <button class="btn-action" onclick="saveSubscriberToFirebase()" style="height: 42px; background: #10b981;">Create Client</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Master Data (DM & Outlet) per-user portal -->
+<div class="modal-overlay" id="masterModal">
+    <div class="modal-content" style="max-width:900px;">
+        <div class="modal-header"><span>📇 Master Data: Delivery Man &amp; Outlet</span><button class="close-btn" onclick="closeMaster()">&times;</button></div>
+        <div class="settings-tab-nav">
+            <button class="settings-tab-btn active" id="mdBtn_dm" onclick="mdSwitch('dm')">👤 Delivery Men (Code &amp; Name)</button>
+            <button class="settings-tab-btn" id="mdBtn_ol" onclick="mdSwitch('ol')">🏬 Outlets (Code &amp; Name)</button>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px;">
+            <div class="form-group" style="flex:1;min-width:110px;"><label>Code</label><input id="mdCode" class="form-control" placeholder="e.g. 86"></div>
+            <div class="form-group" style="flex:2;min-width:170px;"><label>Name</label><input id="mdName" class="form-control" placeholder="Full name"></div>
+            <button class="btn-action" onclick="mdAdd()">+ Add / Update</button>
+            <button class="btn-action" style="background:var(--success);" onclick="document.getElementById('mdFile').click()">📥 Upload CSV</button>
+            <button class="btn-secondary" onclick="mdSample()">⬇ Sample CSV</button>
+            <input type="file" id="mdFile" accept=".csv,text/csv" style="display:none;" onchange="mdUpload(event)">
+        </div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">CSV format: one row per line → <b>code,name</b> (save Excel as "CSV UTF-8"). Uploading adds new rows and updates existing codes.</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+            <input id="mdSearch" class="form-control" placeholder="Search code or name..." style="max-width:240px;" oninput="mdRender()">
+            <span id="mdInfo" style="font-size:12px;font-weight:600;color:var(--text-muted);"></span>
+            <button class="btn-secondary" style="color:var(--danger);" onclick="mdClear()">🗑 Clear all</button>
+        </div>
+        <div style="max-height:320px;overflow-y:auto;border:1px solid var(--border-color);border-radius:8px;">
+            <table class="modern-table"><thead><tr><th style="width:130px;">Code</th><th>Name</th><th style="width:60px;"></th></tr></thead><tbody id="mdBody"></tbody></table>
+        </div>
+        <div id="mdStatus" style="font-size:12px;margin-top:10px;font-weight:600;"></div>
+    </div>
+</div>
+
+<iframe id="printFrame" style="display:none;"></iframe>
+
+<script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyANrFEKpZyEDAGEKBxhYENuZlPt8B-WAgk",
+      authDomain: "fir-smart-mdm.firebaseapp.com",
+      projectId: "fir-smart-mdm",
+      storageBucket: "fir-smart-mdm.firebasestorage.app",
+      messagingSenderId: "1024020811827",
+      appId: "1:1024020811827:web:4c04652a256194fabed346",
+      measurementId: "G-BJSSQNDNPW"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    /* ---- Password protection: only salted PBKDF2 hashes live in the source (no plain-text passwords) ---- */
+    async function pbk(pw, salt) {
+        const k = await crypto.subtle.importKey("raw", new TextEncoder().encode(pw), "PBKDF2", false, ["deriveBits"]);
+        const b = await crypto.subtle.deriveBits({ name: "PBKDF2", salt: new TextEncoder().encode(salt), iterations: 100000, hash: "SHA-256" }, k, 256);
+        return Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2, "0")).join("");
+    }
+    const rndHex = () => Array.from(crypto.getRandomValues(new Uint8Array(12))).map(x => x.toString(16).padStart(2, "0")).join("");
+    const CRED_SETTINGS = { salt: "smart-mdm-settings-1", hash: "d39f6479af1b71b118442a619108d02169c9886407c528fdfb979d74c95c2998" };
+    /* ---- Access control: per-user permissions stored in Firebase (subscribers/{id}.permissions) ---- */
+    const PERM_DEFS = [["memo", "Memo Processing & Print"], ["masterData", "Master Data: DM & Outlet upload"], ["orderReport", "Order Update Report"], ["settingsConfig", "Settings: System Config"], ["uploadData", "Settings: Data Upload Hub"]];
+    const PERM_DEFAULT = { memo: true, masterData: true, orderReport: true, settingsConfig: false, uploadData: false };
+    const isSuper = () => (localStorage.getItem('currentUser') || "") === "linux@ubuntu";
+    function myPerms() { try { return JSON.parse(localStorage.getItem('userPerms') || "null") || PERM_DEFAULT; } catch (e) { return PERM_DEFAULT; } }
+    const can = k => isSuper() || myPerms()[k] === true;
+    const deny = () => alert("Access Denied! You do not have permission for this feature. Please contact the Super Admin.");
+    async function logAdmin(action, target, detail) {
+        try { await db.collection("audit_logs").add({ by: localStorage.getItem('currentUser') || "", action: action, target: target, detail: detail || "", at: firebase.firestore.FieldValue.serverTimestamp() }); } catch (e) {}
+    }
+    async function refreshMyPerms() {
+        const u = localStorage.getItem('currentUser');
+        if (!u || isSuper() || localStorage.getItem('isLocalAccount') !== '0') return;
+        try {
+            const sn = await db.collection("subscribers").doc(u).get();
+            if (!sn.exists || sn.data().disabled) { alert("Your account has been disabled or removed by the admin."); ['isLoggedIn','currentUser','subDays','userPerms','isLocalAccount'].forEach(k => localStorage.removeItem(k)); location.reload(); return; }
+            localStorage.setItem('userPerms', JSON.stringify(Object.assign({}, PERM_DEFAULT, sn.data().permissions || {})));
+        } catch (e) {}
+    }
+    window.addEventListener('load', refreshMyPerms);
+    async function subscriberPassOk(ref, d, pass) {
+        if (d.hash && d.salt) return (await pbk(pass, d.salt)) === d.hash;
+        if (d.password !== undefined && d.password === pass) {   // old plain-text record: accept once, then upgrade to hash
+            try { const salt = rndHex(); await ref.update({ salt: salt, hash: await pbk(pass, salt), password: firebase.firestore.FieldValue.delete() }); } catch (e) {}
+            return true;
+        }
+        return false;
+    }
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+    const secAuth = firebase.initializeApp(firebaseConfig, "sec").auth();   // second instance: creates users without logging the admin out
+    auth.onAuthStateChanged(u => {   // session guard: if Firebase session is gone, the app locks
+        if (!u && localStorage.getItem('isLoggedIn') === 'true') {
+            ['isLoggedIn','currentUser','subDays','userPerms','isLocalAccount'].forEach(k => localStorage.removeItem(k)); location.reload();
+        }
+    });
+
+    let activeClientKey = localStorage.getItem('activeClientKey') || "habiganj";
+    let houseList = JSON.parse(localStorage.getItem('houseList')) || ["habiganj", "moulvibazar", "kulaura", "brahmanbaria"];
+
+    window.onload = function() {
+        if (localStorage.getItem('isLoggedIn') === 'true') {
+            document.getElementById('loginScreen').style.display = "none";
+            document.getElementById('appScreen').style.display = "block";
+            let currentUser = localStorage.getItem('currentUser') || "";
+            let days = localStorage.getItem('subDays') || 0;
+            if (currentUser === "linux@ubuntu" || days == '9999') {
+                document.getElementById('subRemaining').innerText = `👑 Super Admin Access`;
+            } else {
+                document.getElementById('subRemaining').innerText = `⏳ Sub: ${days} Days Left`;
+                activeClientKey = currentUser;
+            }
+            populateHouseDropdown();
+            loadClientDataStorage();
+        }
+    };
+
+    // Order Update Report Data & Logic
+    const orderReportData = [
+        { name: "SHAKHAWAT ULLAH", order: 11320.19, sr: 0.7640, lpc: 1.95, tgt: 1062.53, ach: 348 },
+        { name: "Jagadish Karmakar", order: 45174.07, sr: 0.6682, lpc: 1.97, tgt: 872.04, ach: 279 },
+        { name: "Kanai Banik", order: 31777.87, sr: 0.7100, lpc: 2.67, tgt: 1158.42, ach: 456 },
+        { name: "MD. SOHANUR RAHMAN MISHU", order: 17466.24, sr: 0.6702, lpc: 2.07, tgt: 1023.40, ach: 237 },
+        { name: "Md Mahmudur Rahman", order: 37762.51, sr: 0.6232, lpc: 3.91, tgt: 1627.12, ach: 690 },
+        { name: "MD.SABUJ MIA", order: 33187.14, sr: 0.5705, lpc: 1.50, tgt: 634.68, ach: 153 },
+        { name: "PULOCK DEB", order: 11167.78, sr: 0.6344, lpc: 1.60, tgt: 823.45, ach: 259 },
+        { name: "Sozib Miah", order: 149906.12, sr: 0.7841, lpc: 3.90, tgt: 261.01, ach: 106 },
+        { name: "Monir Hossain", order: 111780.35, sr: 0.6770, lpc: 1.53, tgt: 931.38, ach: 125 },
+        { name: "MD. Abdul Mottalib Riaz", order: 6288.95, sr: 0.6588, lpc: 1.96, tgt: 858.71, ach: 136 },
+        { name: "Riyadul Haque", order: 455831.22, sr: 0.6760, lpc: 2.31, tgt: 9252.74, ach: 2789 },
+        { name: "Afzal Hasan", order: 9795.84, sr: 0.6043, lpc: 1.72, tgt: 1412.12, ach: 283 },
+        { name: "Afjal Hosen", order: 16570.78, sr: 0.6253, lpc: 3.04, tgt: 1499.84, ach: 382 },
+        { name: "Anupam Chandra Paul", order: 27342.39, sr: 0.7259, lpc: 2.42, tgt: 1428.03, ach: 463 },
+        { name: "MD. IQBAL HOSSEN", order: 76100.69, sr: 0.7657, lpc: 1.51, tgt: 1283.55, ach: 430 },
+        { name: "MD ashraful islam jems", order: 65285.65, sr: 0.7270, lpc: 2.54, tgt: 1391.48, ach: 463 },
+        { name: "Md Harun Mia", order: 40803.80, sr: 0.7316, lpc: 2.71, tgt: 1806.86, ach: 444 },
+        { name: "SAJIB PAUL", order: 18958.16, sr: 0.7475, lpc: 2.42, tgt: 1582.40, ach: 383 },
+        { name: "Abde Manaf", order: 45702.38, sr: 0.7222, lpc: 1.79, tgt: 1408.68, ach: 443 },
+        { name: "Mithun Sutradhar", order: 276663.75, sr: 0.5613, lpc: 2.37, tgt: 894.40, ach: 254 },
+        { name: "Pintu Roy", order: 19381.07, sr: 0.6842, lpc: 1.79, tgt: 853.12, ach: 385 },
+        { name: "Naiem Mridha", order: 39444.64, sr: 0.5207, lpc: 1.80, tgt: 1229.37, ach: 321 },
+        { name: "Rajan Kumar Saha", order: 636049.15, sr: 0.6742, lpc: 2.19, tgt: 14789.85, ach: 4251 },
+        { name: "Pallydut", order: 0, sr: 0.0313, lpc: 9.00, tgt: 63.64, ach: 8 }
+    ];
+
+    function openOrderUpdateReport() {
+        if (!can('orderReport')) { closeAllSubmenus(); deny(); return; }
+        closeAllSubmenus();
+        document.getElementById('welcomeDashboard').style.display = "none";
+        document.getElementById('uploadPanel').style.display = "none";
+        document.getElementById('resultsContainer').innerHTML = "";
+        document.getElementById('orderUpdateReportSection').style.display = "block";
+        
+        let nowStr = new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'medium' });
+        document.getElementById('reportLiveDateTime').innerText = nowStr;
+        renderOrderReportTable();
+    }
+
+    function renderOrderReportTable() {
+        const tbody = document.getElementById('orderUpdateTableBody');
+        tbody.innerHTML = "";
+        let totalOrder = 0, totalTgt = 0, totalAch = 0;
+
+        orderReportData.forEach((item, index) => {
+            let targetKey = `tgt_${activeClientKey}_${index}`;
+            let savedTarget = localStorage.getItem(targetKey) || "";
+            let tgtVal = parseFloat(savedTarget) || 0;
+            let achPct = tgtVal > 0 ? ((item.order / tgtVal) * 100).toFixed(1) + "%" : "#DIV/0!";
+            let balance = (tgtVal - item.order).toFixed(2);
+            let iqAchPct = item.tgt > 0 ? Math.round((item.ach / item.tgt) * 100) + "%" : "0%";
+            let iqBalance = (item.tgt - item.ach).toFixed(2);
+            let rr = item.tgt > 0 ? (item.tgt / 18).toFixed(1) : "0";
+
+            totalOrder += item.order;
+            totalTgt += tgtVal;
+            totalAch += item.ach;
+
+            tbody.innerHTML += `
+                <tr>
+                    <td style="text-align:left; font-weight:bold;">${item.name}</td>
+                    <td><input type="number" class="target-input" value="${savedTarget}" oninput="updateReportTarget(${index}, this.value)"></td>
+                    <td>${item.order.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td><span style="color:${tgtVal > 0 ? '#047857' : '#dc2626'}; font-weight:bold;">${achPct}</span></td>
+                    <td>${balance}</td>
+                    <td>${(item.sr * 100).toFixed(2)}%</td>
+                    <td>${item.lpc.toFixed(2)}</td>
+                    <td>${item.tgt}</td>
+                    <td>${item.ach}</td>
+                    <td><b>${iqAchPct}</b></td>
+                    <td>${iqBalance}</td>
+                    <td>${rr}</td>
+                </tr>
+            `;
+        });
+
+        let gTotalAchPct = totalTgt > 0 ? ((totalOrder / totalTgt) * 100).toFixed(1) + "%" : "#DIV/0!";
+        let gTotalBalance = (totalTgt - totalOrder).toFixed(2);
+        let gIqTgtSum = orderReportData.reduce((acc, cur) => acc + cur.tgt, 0);
+        let gIqAchSum = orderReportData.reduce((acc, cur) => acc + cur.ach, 0);
+        let gIqAchPct = gIqTgtSum > 0 ? Math.round((gIqAchSum / gIqTgtSum) * 100) + "%" : "0%";
+
+        tbody.innerHTML += `
+            <tr style="background: #f1f5f9; font-weight: bold;">
+                <td style="text-align:left;">G.Total</td>
+                <td>${totalTgt > 0 ? totalTgt.toFixed(2) : '0'}</td>
+                <td>${totalOrder.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                <td><span style="color:#047857;">${gTotalAchPct}</span></td>
+                <td>${gTotalBalance}</td>
+                <td>65.87%</td>
+                <td>2.18</td>
+                <td>${gIqTgtSum.toFixed(2)}</td>
+                <td>${gIqAchSum}</td>
+                <td>${gIqAchPct}</td>
+                <td>${(gIqTgtSum - gIqAchSum).toFixed(2)}</td>
+                <td>947.68</td>
+            </tr>
+        `;
+    }
+
+    function updateReportTarget(index, val) {
+        localStorage.setItem(`tgt_${activeClientKey}_${index}`, val);
+        renderOrderReportTable();
+    }
+
+    function toggleNemoMinimize() {
+        let body = document.getElementById('nemoChatBody');
+        let widget = document.getElementById('nemoChatWidget');
+        if (body.style.display === "none") {
+            body.style.display = "flex"; widget.style.height = "420px";
+        } else {
+            body.style.display = "none"; widget.style.height = "36px";
+        }
+    }
+
+    function sendNemoMsg() {
+        let input = document.getElementById('nemoInput');
+        let txt = input.value.trim();
+        if(!txt) return;
+        let body = document.getElementById('nemoChatBody');
+        body.innerHTML += `<div style="background: var(--primary); color: white; padding: 8px 12px; border-radius: 8px; max-width: 90%; align-self: flex-end;">${txt}</div>`;
+        input.value = "";
+        body.scrollTop = body.scrollHeight;
+
+        setTimeout(() => {
+            let reply = "Hello! I am Nemo. I can guide you through the Order Update Report, CSV uploading, and memo processing.";
+            body.innerHTML += `<div style="background: var(--primary-light); color: var(--primary-dark); padding: 8px 12px; border-radius: 8px; max-width: 90%; align-self: flex-start;">${reply}</div>`;
+            body.scrollTop = body.scrollHeight;
+        }, 600);
+    }
+
+    function toggleSubmenu(menuId, event) {
+        event.stopPropagation();
+        closeAllSubmenus();
+        let submenu = document.getElementById(menuId);
+        if (submenu) {
+            submenu.style.display = (submenu.style.display === "block") ? "none" : "block";
+        }
+    }
+
+    function closeAllSubmenus(event) {
+        let submenus = document.querySelectorAll('.nav-submenu-popup');
+        submenus.forEach(s => s.style.display = "none");
+    }
+
+    function openDeveloperModal() { document.getElementById('developerModal').style.display = "flex"; }
+    function closeDeveloperModal() { document.getElementById('developerModal').style.display = "none"; }
+
+    function openBillingModal() {
+        let currentUser = localStorage.getItem('currentUser') || "";
+        if (currentUser !== "linux@ubuntu") {
+            alert("Access Denied! Only Super Admin can access Account Hub.");
+            return;
+        }
+        document.getElementById('billingModal').style.display = "flex";
+    }
+    function closeBillingModal() { document.getElementById('billingModal').style.display = "none"; }
+
+    function switchBillingTab(event, tabId) {
+        let contents = document.querySelectorAll('#billingModal .settings-tab-content');
+        contents.forEach(c => c.classList.remove('active'));
+        let buttons = document.querySelectorAll('#billingModal .settings-tab-btn');
+        buttons.forEach(b => b.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        event.currentTarget.classList.add('active');
+    }
+
+    function updateClientDays() {
+        let client = document.getElementById('billClientSelect').value;
+        let action = document.getElementById('billActionType').value;
+        let days = parseInt(document.getElementById('billDaysInput').value);
+        if(isNaN(days)) { alert("Enter valid days!"); return; }
+        alert(`Success! ${action === 'add' ? '+' : '-'}${days} days updated for ${client}.`);
+    }
+
+    function saveLedgerRecord() {
+        let client = document.getElementById('ledgerClient').value.trim();
+        let paid = document.getElementById('ledgerPaid').value.trim();
+        let due = document.getElementById('ledgerDue').value.trim();
+        if(!client || !paid) { alert("Fill in required fields!"); return; }
+        alert("Ledger saved successfully!");
+        document.getElementById('ledgerClient').value = "";
+        document.getElementById('ledgerPaid').value = "";
+        document.getElementById('ledgerDue').value = "";
+    }
+
+    function populateHouseDropdown() {
+        let select = document.getElementById('targetClientSelect');
+        let billSelect = document.getElementById('billClientSelect');
+        if(!select) return;
+        let optionsHtml = '<option value="">-- Choose House --</option>';
+        houseList.forEach(house => {
+            let optVal = house;
+            let optText = house.charAt(0).toUpperCase() + house.slice(1) + " House";
+            optionsHtml += `<option value="${optVal}">${optText}</option>`;
+        });
+        select.innerHTML = optionsHtml;
+        if(billSelect) billSelect.innerHTML = optionsHtml;
+        select.value = activeClientKey;
+    }
+
+    function addNewHouse() {
+        let newName = document.getElementById('newHouseNameInput').value.trim().toLowerCase().replace(/\s+/g, '_');
+        if(!newName) { alert("Enter valid house name!"); return; }
+        if(houseList.includes(newName)) { alert("House already exists!"); return; }
+        houseList.push(newName);
+        localStorage.setItem('houseList', JSON.stringify(houseList));
+        document.getElementById('newHouseNameInput').value = "";
+        populateHouseDropdown();
+        document.getElementById('targetClientSelect').value = newName;
+        onHouseDropdownChange(newName);
+        alert(`House "${newName.toUpperCase()}" added successfully!`);
+    }
+
+    const toEmail = id => id.replace(/[^a-z0-9._-]/g, "_") + "@smart-mdm.app";
+    const newAlias = id => id.replace(/[^a-z0-9._-]/g, "_") + "." + Math.random().toString(36).slice(2, 7) + "@smart-mdm.app";
+    function startSession(user, isAdm, days, perms) {
+        localStorage.setItem('isLoggedIn', 'true');
+        localStorage.setItem('currentUser', isAdm ? "linux@ubuntu" : user);
+        localStorage.setItem('subDays', String(days));
+        localStorage.setItem('isLocalAccount', isAdm ? '1' : '0');
+        if (!isAdm) localStorage.setItem('userPerms', JSON.stringify(Object.assign({}, PERM_DEFAULT, perms || {})));
+        document.getElementById('subRemaining').innerText = isAdm ? "👑 Super Admin Access" : "⏳ Sub: " + days + " Days Left";
+        if (!isAdm) activeClientKey = user;
+        document.getElementById('loginScreen').style.display = "none";
+        document.getElementById('appScreen').style.display = "block";
+        populateHouseDropdown(); loadClientDataStorage(); cloudLoad();
+    }
+    async function verifySubscription() {
+        const user = document.getElementById('loginUser').value.trim().toLowerCase();
+        const pass = document.getElementById('loginPass').value;
+        const msgBox = document.getElementById('loginMsg'), loginBtn = document.getElementById('loginBtn');
+        const bad = t => { msgBox.innerHTML = "❌ " + t; msgBox.style.color = "var(--danger)"; };
+        if (!user || !pass) { bad("Enter ID & Password."); return; }
+        loginBtn.innerHTML = "⏳ Authenticating..."; loginBtn.disabled = true;
+        try {
+            let email = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(user) ? user : toEmail(user);   // a full e-mail also works
+            try { const m = await db.collection("loginMap").doc(user).get(); if (m.exists && m.data().email) email = m.data().email; } catch (e) {}
+            const cred = await auth.signInWithEmailAndPassword(email, pass);
+            const uid = cred.user.uid;
+            const ad = await db.collection("admins").doc(uid).get();
+            if (ad.exists) { startSession(user, true, 9999); return; }
+            let data = null;
+            try { const sn = await db.collection("subscribers").doc(user).get(); if (sn.exists && sn.data().uid === uid) data = sn.data(); } catch (e) {}
+            if (!data) { bad("Signed in to Firebase, but no account record exists. <b>Admin:</b> in Firestore create collection <b>admins</b> with Document ID <b>" + uid + "</b>. <b>Client:</b> ask the admin to create your ID."); await auth.signOut(); return; }
+            if (data.disabled) { await auth.signOut(); bad("Account disabled by admin."); return; }
+            const expiry = new Date(data.expiryDate), today = new Date(); today.setHours(0, 0, 0, 0);
+            if (today > expiry) { await auth.signOut(); bad("Subscription Expired."); return; }
+            startSession(user, false, Math.ceil((expiry - today) / 86400000), data.permissions);
+        } catch (error) {
+            const c = (error && error.code) || "";
+            bad(/invalid-credential|wrong-password|user-not-found|invalid-email/.test(c) ? "Incorrect ID or Password! (Old passwords no longer work: log in with your Firebase account.)"
+                : /operation-not-allowed/.test(c) ? "Email/Password sign-in is not enabled. Firebase Console → Authentication → Sign-in method → Email/Password → Enable."
+                : /permission-denied/.test(c) ? "Firestore rules blocked access. Publish firestore.rules and check the admins document."
+                : /referer|api-key|app-not-authorized/.test(c) ? "Firebase API key blocks this website. Allow this domain in the API key restrictions."
+                : /too-many/.test(c) ? "Too many attempts. Please try again later."
+                : /network/.test(c) ? "Network error. Check the internet connection."
+                : "Login error: " + (c || (error && error.message) || "unknown"));
+        } finally { loginBtn.innerHTML = "Log In"; loginBtn.disabled = false; }
+    }
+
+    function logoutSystem() {
+        if(confirm("Log out securely?")) {
+            localStorage.removeItem('isLoggedIn'); localStorage.removeItem('currentUser'); localStorage.removeItem('subDays'); localStorage.removeItem('userPerms'); localStorage.removeItem('isLocalAccount'); auth.signOut();
+            document.getElementById('appScreen').style.display = "none";
+            document.getElementById('loginScreen').style.display = "flex";
+            showWelcomeDashboard();
+        }
+    }
+
+    async function saveSubscriberToFirebase() {
+        if (!isSuper()) { deny(); return; }
+        const user = document.getElementById('newSubUser').value.trim().toLowerCase();
+        const pass = document.getElementById('newSubPass').value;
+        const expiry = document.getElementById('newSubExpiry').value.trim();
+        if (!user || !pass || !expiry) { alert("Fill all fields!"); return; }
+        if (!/^[a-z0-9._-]{3,30}$/.test(user)) { alert("User ID: 3-30 characters, only a-z, 0-9, dot, dash, underscore."); return; }
+        if (pass.length < 8) { alert("Password must be at least 8 characters."); return; }
+        try {
+            if ((await db.collection("subscribers").doc(user).get()).exists) { alert("This User ID already exists."); return; }
+            const email = newAlias(user);
+            const c = await secAuth.createUserWithEmailAndPassword(email, pass); await secAuth.signOut();
+            await db.collection("loginMap").doc(user).set({ email: email });
+            await db.collection("subscribers").doc(user).set({ uid: c.user.uid, email: email, expiryDate: expiry, permissions: PERM_DEFAULT, disabled: false, createdAt: Date.now() });
+            await logAdmin("create_user", user, "exp:" + expiry);
+            alert(`Success! Client ID "${user}" created. Set the access permissions in Clients & Access Control.`);
+            document.getElementById('newSubUser').value = ""; document.getElementById('newSubPass').value = "";
+            loadUsersAdmin();
+        } catch (error) { alert("Failed to create user: " + ((error && (error.code || error.message)) || error)); }
+    }
+
+    function openMemoProcessingQueue() {
+        if (!can('memo')) { deny(); return; }
+        closeAllSubmenus();
+        document.getElementById('welcomeDashboard').style.display = "none";
+        document.getElementById('orderUpdateReportSection').style.display = "none";
+        document.getElementById('uploadPanel').style.display = "block";
+        document.getElementById('resultsContainer').innerHTML = "";
+        fileBuffers = []; groupedMemos = {};
+    }
+    function showWelcomeDashboard() {
+        closeAllSubmenus();
+        document.getElementById('welcomeDashboard').style.display = "flex";
+        document.getElementById('orderUpdateReportSection').style.display = "none";
+        document.getElementById('uploadPanel').style.display = "none";
+        document.getElementById('loading').style.display = "none";
+        document.getElementById('resultsContainer').innerHTML = "";
+    }
+
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+    function updateClock() { document.getElementById('liveClock').innerText = new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'medium' }); }
+    setInterval(updateClock, 1000); updateClock();
+
+    let savedHouseName = "S-SMART TECHNOLOGIES";
+    let minPrintAmount = parseFloat(localStorage.getItem('minPrintAmount')) || 300;
+    document.getElementById('displayHouseName').innerText = savedHouseName;
+
+    let currentDeliveryMap = {};
+    let currentOutletMap = {};
+    let fileBuffers = []; let groupedMemos = {}; 
+
+    function loadClientDataStorage() {
+        let dmData = localStorage.getItem(`dmMap_${activeClientKey}`);
+        let outletData = localStorage.getItem(`outletMap_${activeClientKey}`);
+        currentDeliveryMap = dmData ? JSON.parse(dmData) : {};
+        currentOutletMap = outletData ? JSON.parse(outletData) : {};
+        let countEl = document.getElementById('outletCountDisplay');
+        if(countEl) countEl.innerText = Object.keys(currentOutletMap).length + " Outlets";
+        renderSettingsList();
+    }
+
+    function onHouseDropdownChange(clientKey) {
+        if (!clientKey) return;
+        activeClientKey = clientKey;
+        localStorage.setItem('activeClientKey', activeClientKey);
+        loadClientDataStorage(); cloudLoad();
+    }
+
+    function bengaliToEnglish(str) {
+        const bnDigits = {'০':'0','১':'1','২':'2','৩':'3','৪':'4','৫':'5','৬':'6','৭':'7','৮':'8','৯':'9'};
+        return str.replace(/[০-৯]/g, m => bnDigits[m]);
+    }
+
+    function processCSVData(text) {
+        let lines = text.split(/\r?\n/); let result = {};
+        lines.forEach(line => {
+            let parts = line.split(',');
+            if (parts.length >= 2) {
+                let code = parts[0].trim().replace(/^["']|["']$/g, '');
+                let name = parts.slice(1).join(',').trim().replace(/^["']|["']$/g, '');
+                if (code && name && code.toLowerCase() !== 'code' && code.toLowerCase() !== 'outlet code') result[code] = name;
+            }
+        });
+        return result;
+    }
+
+    function uploadDMCSV(event) {
+        let file = event.target.files[0]; if (!file) return;
+        let reader = new FileReader();
+        reader.onload = function(e) {
+            let data = processCSVData(e.target.result);
+            currentDeliveryMap = { ...currentDeliveryMap, ...data };
+            localStorage.setItem(`dmMap_${activeClientKey}`, JSON.stringify(currentDeliveryMap));
+            renderSettingsList(); cloudSave('dm'); alert(`DM List loaded for ${activeClientKey.toUpperCase()}!`);
+        };
+        reader.readAsText(file, 'UTF-8');
+        event.target.value = "";
+    }
+
+    function uploadOutletCSV(event) {
+        let file = event.target.files[0]; if (!file) return;
+        let reader = new FileReader();
+        reader.onload = function(e) {
+            let data = processCSVData(e.target.result);
+            currentOutletMap = { ...currentOutletMap, ...data };
+            localStorage.setItem(`outletMap_${activeClientKey}`, JSON.stringify(currentOutletMap));
+            document.getElementById('outletCountDisplay').innerText = Object.keys(currentOutletMap).length + " Outlets";
+            cloudSave('ol'); alert(`Outlets mapped for ${activeClientKey.toUpperCase()}!`);
+        };
+        reader.readAsText(file, 'UTF-8');
+        event.target.value = "";
+    }
+
+    function saveHouseName() { savedHouseName = document.getElementById('houseNameInput').value.trim(); document.getElementById('displayHouseName').innerText = savedHouseName; alert("House Name Saved!"); }
+    function saveMinAmount() { let val = parseFloat(document.getElementById('minAmountInput').value); if(!isNaN(val) && val >= 0) { minPrintAmount = val; localStorage.setItem('minPrintAmount', val); alert("Min Amount Updated!"); } }
+    
+    function checkSettingsAccess() {
+        let currentUser = localStorage.getItem('currentUser') || "";
+        if (currentUser === "linux@ubuntu") { openSettingsModal(true); }
+        else if (can('settingsConfig') || can('uploadData')) { window._allowedTabs = [can('settingsConfig') ? 0 : -1, can('uploadData') ? 2 : -1]; openSettingsModal(false); }
+        else {
+            document.getElementById('passwordModal').style.display = "flex";
+            document.getElementById('adminPassword').value = "";
+            setTimeout(() => document.getElementById('adminPassword').focus(), 100);
+        }
+    }
+    function closePasswordModal() { document.getElementById('passwordModal').style.display = "none"; }
+    async function verifySettingsPassword() {
+        if ((await pbk(document.getElementById('adminPassword').value, CRED_SETTINGS.salt)) === CRED_SETTINGS.hash) { closePasswordModal(); window._allowedTabs = [0]; openSettingsModal(false); } 
+        else { alert("Incorrect Password! Access Denied."); }
+    }
+
+    function openSettingsModal(isSuperAdmin) { 
+        document.getElementById('settingsModal').style.display = "flex"; 
+        let navButtons = document.querySelectorAll('#settingsModal .settings-tab-btn');
+        if (isSuperAdmin) {
+            navButtons.forEach(btn => btn.style.display = "block");
+            switchSettingsTab(null, 'tabConfig');
+            populateHouseDropdown();
+            document.getElementById('targetClientSelect').value = activeClientKey;
+        } else {
+            const allow = window._allowedTabs || [0]; let firstShown = true;
+            navButtons.forEach((btn, index) => {
+                if (allow.includes(index)) { btn.style.display = "block"; if (firstShown) { btn.click(); firstShown = false; } }
+                else { btn.style.display = "none"; }
+            });
+        }
+        document.getElementById('minAmountInput').value = minPrintAmount;
+        renderSettingsList(); 
+    }
+    function closeSettings() { document.getElementById('settingsModal').style.display = "none"; }
+    function switchSettingsTab(event, tabId) {
+        if (tabId === 'tabClientMgmt' && isSuper()) loadUsersAdmin();
+        let contents = document.querySelectorAll('#settingsModal .settings-tab-content');
+        contents.forEach(c => c.classList.remove('active'));
+        let buttons = document.querySelectorAll('#settingsModal .settings-tab-btn');
+        buttons.forEach(b => b.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        if (event && event.currentTarget) { event.currentTarget.classList.add('active'); } 
+        else { document.querySelector('#settingsModal .settings-tab-btn').classList.add('active'); }
+    }
+    function openReportModal() { document.getElementById('reportModal').style.display = "flex"; }
+    function closeReportModal() { document.getElementById('reportModal').style.display = "none"; }
+    
+    function renderSettingsList() {
+        const tbody = document.getElementById('dmListBody'); if(!tbody) return;
+        tbody.innerHTML = "";
+        Object.keys(currentDeliveryMap).sort((a,b)=>parseInt(a)-parseInt(b)).forEach(code => {
+            tbody.innerHTML += `<tr><td style="padding: 8px;"><b>${code}</b></td><td style="padding: 8px;">${currentDeliveryMap[code]}</td></tr>`;
+        });
+    }
+
+    const dropZone = document.getElementById('dropZone'); const fileInput = document.getElementById('pdfInput');
+    if(dropZone) {
+        dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.style.background = "#e0e7ff"; });
+        dropZone.addEventListener('dragleave', () => dropZone.style.background = "#f8fafc");
+        dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.style.background = "#f8fafc"; if(e.dataTransfer.files.length){ fileInput.files = e.dataTransfer.files; updateFileCount(fileInput.files); } });
+    }
+    function updateFileCount(files) { document.getElementById('fileCount').innerText = files.length > 0 ? `Selected: ${files.length} PDF file(s).` : ''; }
+
+    /* ------------- 3. Core Engine: PDF + Threshold & Damage Logic ------------- */
+    async function processAllPDFs() {
+        const files = fileInput.files;
+        if (files.length === 0) { alert("Upload PDF first!"); return; }
+        document.getElementById('loading').style.display = "block";
+        document.getElementById('resultsContainer').style.display = "none";
+        document.getElementById('resultsContainer').innerHTML = "";
+        fileBuffers = []; let allMemosMap = {}; 
+        let outletKeys = Object.keys(currentOutletMap);
+
+        try {
+            for (let f = 0; f < files.length; f++) {
+                document.getElementById('loadingText').innerText = `Scanning File ${f+1}...`;
+                let fileCode = files[f].name.replace(/\.[^/.]+$/, "").trim();
+                let engCode = bengaliToEnglish(fileCode);
+                let deliveryMan = currentDeliveryMap[engCode] || `Unknown (${engCode})`;
+                const arrayBuffer = await files[f].arrayBuffer();
+                const fileId = `file_${f}`;
+                fileBuffers.push({ id: fileId, bytes: arrayBuffer });
+                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                let lastMemoNo = `Unknown_${fileCode}`; 
+
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const textContent = await page.getTextContent();
+                    const viewport = page.getViewport({ scale: 1.0 });
+                    const midY = viewport.height / 2;
+                    let topItems = [], bottomItems = [];
+                    textContent.items.forEach(item => { if (item.transform[5] > midY) topItems.push(item.str.trim()); else bottomItems.push(item.str.trim()); });
+                    const blocks = [ { text: topItems.join(" "), half: 'top' }, { text: bottomItems.join(" "), half: 'bottom' } ];
+
+                    for (let blockObj of blocks) {
+                        let blockText = blockObj.text; let halfPart = blockObj.half;
+                        if (blockText.trim().length < 15) continue;
+                        let rawAlphaForSearch = blockText.replace(/[^\u0980-\u09FFa-zA-Z]/g, '');
+                        let engBlockStr = bengaliToEnglish(blockText).replace(/,/g, '').replace(/(\d)\s*\.\s*(\d)/g, '$1.$2'); 
+                        let cleanStrForMemo = engBlockStr.replace(/\s+/g, '');
+                        let memoMatch = cleanStrForMemo.match(/(26000\d{5})/);
+                        let pNum = (cleanStrForMemo.match(/P(\d+)of(\d+)/i) || [0,1])[1];
+                        let currentMemoNo = memoMatch ? memoMatch[1] : (pNum > 1 ? lastMemoNo : (engBlockStr.includes("S-SMART") ? "No_Num_" + Math.floor(Math.random()*10000) : lastMemoNo));
+                        lastMemoNo = currentMemoNo;
+
+                        let amount = 0.0, isDamage = false, hasPayout = false, hasDecimals = false;
+                        
+                        if (rawAlphaForSearch.includes("পেআউট") || rawAlphaForSearch.includes("েপআউট") || rawAlphaForSearch.includes("পআউট") || rawAlphaForSearch.includes("আউট") || /payout/i.test(rawAlphaForSearch) || /p-out/i.test(engBlockStr)) {
+                            hasPayout = true;
+                        }
+
+                        if (rawAlphaForSearch.includes("ক্ষতিগ্রস্থ") || rawAlphaForSearch.includes("ক্ষতিগ্রস্ত") || rawAlphaForSearch.includes("ডেমেজ") || rawAlphaForSearch.includes("ড্যামেজ") || /damage/i.test(rawAlphaForSearch)) { 
+                            if (!hasPayout) { isDamage = true; amount = 0.0; }
+                        }
+
+                        let allDecimals = [...engBlockStr.matchAll(/(\d+\.\d{1,2})/g)].map(m => parseFloat(m[1]));
+                        if (allDecimals.length > 0) { 
+                            hasDecimals = true; 
+                            amount = Math.max(...allDecimals); 
+                        }
+
+                        if (amount === 0 && !hasPayout) {
+                            isDamage = true;
+                        }
+
+                        let foundOutletName = "";
+                        if (outletKeys.length > 0) {
+                            for (let k = 0; k < outletKeys.length; k++) {
+                                if (cleanStrForMemo.includes(outletKeys[k].replace(/\s+/g, '')) || engBlockStr.includes(outletKeys[k])) {
+                                    foundOutletName = currentOutletMap[outletKeys[k]]; break;
+                                }
+                            }
+                        }
+
+                        if (!allMemosMap[currentMemoNo]) {
+                            allMemosMap[currentMemoNo] = { memo_no: currentMemoNo, amount: 0.0, isDamage: false, hasPayout: false, partsSet: new Set(), deliveryMan: deliveryMan, fileId: fileId, outletName: "" };
+                        }
+                        allMemosMap[currentMemoNo].partsSet.add((i - 1) + ':' + halfPart);
+                        if (amount > allMemosMap[currentMemoNo].amount) allMemosMap[currentMemoNo].amount = amount;
+                        if (isDamage) allMemosMap[currentMemoNo].isDamage = true;
+                        if (hasPayout) allMemosMap[currentMemoNo].hasPayout = true;
+                        if (!allMemosMap[currentMemoNo].outletName && foundOutletName) allMemosMap[currentMemoNo].outletName = foundOutletName;
+                    }
+                }
+            }
+
+            groupedMemos = {};
+            Object.values(allMemosMap).forEach(memo => {
+                const isSelected = (memo.amount >= minPrintAmount && !memo.isDamage && !memo.hasPayout) || memo.isDamage || memo.hasPayout || (memo.amount === 0);
+
+                if (!groupedMemos[memo.deliveryMan]) groupedMemos[memo.deliveryMan] = [];
+                groupedMemos[memo.deliveryMan].push({ 
+                    fileId: memo.fileId, partsData: Array.from(memo.partsSet).join(","), 
+                    memo_no: memo.memo_no, amount: memo.amount, isDamage: memo.isDamage, 
+                    hasPayout: memo.hasPayout, outletName: memo.outletName, selected: isSelected 
+                });
+            });
+            renderResultsDCODE();
+        } catch (error) { alert("Processing Error."); }
+        finally { document.getElementById('loading').style.display = "none"; }
+    }
+
+    function toggleDMBody(bodyId, iconId) {
+        let el = document.getElementById(bodyId); let icon = document.getElementById(iconId);
+        if (el.style.display === "none") { el.style.display = "block"; icon.innerText = "▲"; } 
+        else { el.style.display = "none"; icon.innerText = "▼"; }
+    }
+
+    function switchTab(dmCounter, tabName) {
+        let validTab = document.getElementById(`tab_valid_${dmCounter}`);
+        let skippedTab = document.getElementById(`tab_skipped_${dmCounter}`);
+        let validBtn = document.getElementById(`btn_valid_${dmCounter}`);
+        let skippedBtn = document.getElementById(`btn_skipped_${dmCounter}`);
+
+        if (tabName === 'valid') {
+            validTab.style.display = 'block';
+            skippedTab.style.display = 'none';
+            validBtn.classList.add('active');
+            skippedBtn.classList.remove('active');
+        } else {
+            validTab.style.display = 'none';
+            skippedTab.style.display = 'block';
+            skippedBtn.classList.add('active');
+            validBtn.classList.remove('active');
+        }
+    }
+
+    function renderResultsDCODE() {
+        const container = document.getElementById('resultsContainer'); container.innerHTML = "";
+        let dmCounter = 1;
+        Object.keys(groupedMemos).forEach((dmName) => {
+            const memos = groupedMemos[dmName];
+            let totalMemos = memos.length;
+            let damageCount = memos.filter(m => m.isDamage && !m.hasPayout).length;
+            let payoutCount = memos.filter(m => m.hasPayout).length;
+            let validCount = memos.filter(m => !m.isDamage && !m.hasPayout && m.amount >= minPrintAmount).length;
+            let skippedCount = memos.filter(m => !m.isDamage && !m.hasPayout && m.amount < minPrintAmount && m.amount > 0).length;
+            
+            let printable = memos.filter(m => m.selected); 
+            let skipped = memos.filter(m => !m.selected);
+            let btnState = printable.length > 0 ? "" : "disabled";
+            let bodyId = `body_${dmCounter}`; let iconId = `icon_${dmCounter}`;
+            let payoutPillHtml = payoutCount > 0 ? `<span class="stat-pill payout"><b>Payouts:</b> ${payoutCount}</span>` : '';
+
+            let html = `
+                <div class="dm-section">
+                    <div class="dm-header-wrap" onclick="toggleDMBody('${bodyId}', '${iconId}')">
+                        <div>
+                            <div class="dm-title">Delivery Man: ${dmName}</div>
+                            <div class="stat-row">
+                                <span class="stat-pill"><b>Total:</b> ${totalMemos}</span>
+                                <span class="stat-pill valid"><b>Valid:</b> ${validCount}</span>
+                                <span class="stat-pill damage"><b>Damage:</b> ${damageCount}</span>
+                                ${payoutPillHtml}
+                                <span class="stat-pill skip"><b>Skipped:</b> ${skippedCount}</span>
+                            </div>
+                        </div>
+                        <div id="${iconId}" style="font-weight:bold; color:var(--text-muted);">▼</div>
+                    </div>
+                    <div id="${bodyId}" style="display: none; background: #fafafa; border-top: 1px solid var(--border-color);">
+                        
+                        <!-- Modern Tab Nav -->
+                        <div class="tab-nav">
+                            <button class="tab-btn active" id="btn_valid_${dmCounter}" onclick="switchTab(${dmCounter}, 'valid')">Valid & Print Memos (${printable.length})</button>
+                            <button class="tab-btn" id="btn_skipped_${dmCounter}" onclick="switchTab(${dmCounter}, 'skipped')">Skipped Memos List (${skipped.length})</button>
+                        </div>
+
+                        <!-- Tab 1: Valid & Print Memos (Modernized Design) -->
+                        <div id="tab_valid_${dmCounter}" class="tab-content active">
+                            <div class="modern-table-container">
+                                <div class="modern-table-toolbar">
+                                    <span style="font-weight: 600; color: var(--text-muted); font-size: 13px;">Ready for Stitching & Printing</span>
+                                    <button class="btn-action" onclick="printGroupAutoStitch('${dmName}', this, '${dmCounter}')" ${btnState}>🖨 Execute Print</button>
+                                </div>
+                                <table class="modern-table">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 50px; text-align: center;">Sel</th>
+                                            <th>Memo No</th>
+                                            <th>Shop Name</th>
+                                            <th>Status</th>
+                                            <th>Amount</th>
+                                            <th>Pages</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+            `;
+            if(printable.length === 0) {
+                html += `<tr><td colspan="6" style="padding: 30px; text-align: center; color: var(--text-muted);">No printable memos in this section.</td></tr>`;
+            } else {
+                printable.forEach(item => {
+                    let badgeClass = "status-selected"; let statusText = "Selected";
+                    if (item.hasPayout) { badgeClass = "status-payout"; statusText = "Payout (Priority)"; } 
+                    else if (item.isDamage || item.amount === 0) { badgeClass = "status-damage"; statusText = "Damage / 0 BDT"; }
+                    let amountDisplay = item.isDamage && !item.hasPayout ? "0.00" : item.amount.toLocaleString('en-US', { minimumFractionDigits: 2 });
+
+                    html += `<tr>
+                        <td style="text-align: center;"><input type="checkbox" class="cb-${dmCounter} checkbox-custom" data-file="${item.fileId}" data-parts="${item.partsData}" checked></td>
+                        <td><strong style="color: var(--text-dark);">${item.memo_no}</strong></td>
+                        <td>${item.outletName || '<span style="color: #94a3b8;">-</span>'}</td>
+                        <td><span class="status-badge ${badgeClass}">${statusText}</span></td>
+                        <td><strong style="color: var(--primary);">৳ ${amountDisplay}</strong></td>
+                        <td style="color: var(--text-muted); font-size: 12px;">${item.partsData}</td>
+                    </tr>`;
+                });
+            }
+            html += `</tbody></table></div></div>`;
+
+            // Tab 2: Skipped Memos List (Modernized Design)
+            html += `
+                        <div id="tab_skipped_${dmCounter}" class="tab-content">
+                            <div class="modern-table-container">
+                                <div class="modern-table-toolbar" style="background: var(--danger-bg);">
+                                    <span style="font-weight: 600; color: var(--danger); font-size: 13px;">⚠️ Skipped Memos (Below Threshold ${minPrintAmount} BDT)</span>
+                                </div>
+                                <table class="modern-table">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 50px; text-align: center;">Sel</th>
+                                            <th>Memo No</th>
+                                            <th>Shop Name</th>
+                                            <th>Status</th>
+                                            <th>Amount</th>
+                                            <th>Pages</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+            `;
+            if(skipped.length === 0) {
+                html += `<tr><td colspan="6" style="padding: 30px; text-align: center; color: var(--text-muted);">No skipped memos found.</td></tr>`;
+            } else {
+                skipped.forEach(item => {
+                    let amountDisplay = item.amount.toLocaleString('en-US', { minimumFractionDigits: 2 });
+                    html += `<tr>
+                        <td style="text-align: center;"><input type="checkbox" class="cb-${dmCounter} checkbox-custom" data-file="${item.fileId}" data-parts="${item.partsData}"></td>
+                        <td><strong style="color: var(--text-dark);">${item.memo_no}</strong></td>
+                        <td>${item.outletName || '<span style="color: #94a3b8;">-</span>'}</td>
+                        <td><span class="status-badge status-dropped">Skipped</span></td>
+                        <td><strong style="color: var(--danger);">৳ ${amountDisplay}</strong></td>
+                        <td style="color: var(--text-muted); font-size: 12px;">${item.partsData}</td>
+                    </tr>`;
+                });
+            }
+            html += `</tbody></table></div></div></div></div>`;
+
+            container.innerHTML += html; dmCounter++;
+        });
+        container.style.display = "block";
+        document.getElementById('uploadPanel').style.display = "none";
+    }
+
+    async function printGroupAutoStitch(dmName, btnElement, dmCounterClass) {
+        const checkboxes = document.querySelectorAll(`.cb-${dmCounterClass}:checked`);
+        if (checkboxes.length === 0) { alert("Select memo!"); return; }
+        const origText = btnElement.innerHTML; btnElement.innerHTML = "⏳..."; btnElement.disabled = true;
+        try {
+            let allParts = [];
+            checkboxes.forEach(cb => {
+                let fId = cb.getAttribute('data-file'); let partsStr = cb.getAttribute('data-parts'); 
+                partsStr.split(',').forEach(p => { let [pIdx, hlf] = p.split(':'); if (pIdx && hlf) allParts.push({ fileId: fId, pageIndex: parseInt(pIdx), half: hlf }); });
+            });
+            let uniqueMap = new Map(); allParts.forEach(p => uniqueMap.set(p.fileId+"_"+p.pageIndex+"_"+p.half, p));
+            let uniqueParts = Array.from(uniqueMap.values());
+            const { PDFDocument } = PDFLib; const newPdfDoc = await PDFDocument.create(); let loadedPdfs = {};
+            for (let part of uniqueParts) {
+                if (!loadedPdfs[part.fileId]) { let fObj = fileBuffers.find(f => f.id === part.fileId); loadedPdfs[part.fileId] = await PDFDocument.load(fObj.bytes); }
+            }
+            let currentNewPage = null; let slotCount = 0; 
+            for (let part of uniqueParts) {
+                const srcPage = loadedPdfs[part.fileId].getPage(part.pageIndex);
+                const { width, height } = srcPage.getSize(); const midY = height / 2;
+                if (slotCount === 0) currentNewPage = newPdfDoc.addPage([width, height]);
+                const box = part.half === 'top' ? { left: 0, bottom: midY, right: width, top: height } : { left: 0, bottom: 0, right: width, top: midY };
+                const embedded = await newPdfDoc.embedPage(srcPage, box);
+                currentNewPage.drawPage(embedded, { x: 0, y: (slotCount === 0 ? midY : 0), width: width, height: midY });
+                slotCount++; if (slotCount === 2) slotCount = 0; 
+            }
+            const blob = new Blob([await newPdfDoc.save()], { type: "application/pdf" });
+            const blobUrl = URL.createObjectURL(blob);
+            const printFrame = document.getElementById('printFrame'); printFrame.src = blobUrl;
+            printFrame.onload = function() {
+                try { printFrame.contentWindow.focus(); printFrame.contentWindow.print(); } catch(e) { window.open(blobUrl); }
+                setTimeout(() => { btnElement.innerHTML = origText; btnElement.disabled = false; }, 1000);
+            };
+        } catch (error) { alert("Print Error!"); btnElement.innerHTML = origText; btnElement.disabled = false; }
+    }
+
+    /* ================= Admin: users & access control ================= */
+    let USERS = [];
+    function setUsersMsg(t, ok) { const m = document.getElementById('usersMsg'); if (!m) return; m.style.color = ok ? 'var(--success)' : 'var(--danger)'; m.textContent = t; }
+    async function loadUsersAdmin() {
+        const m = document.getElementById('usersMsg'); m.style.color = 'var(--text-muted)'; m.textContent = 'Loading users from Firebase...';
+        try {
+            const snap = await db.collection("subscribers").get(); USERS = [];
+            snap.forEach(d => { const x = d.data(); USERS.push({ id: d.id, expiry: x.expiryDate || "", disabled: !!x.disabled, perms: Object.assign({}, PERM_DEFAULT, x.permissions || {}) }); });
+            USERS.sort((a, b) => a.id.localeCompare(b.id));
+            m.style.color = 'var(--text-muted)'; m.textContent = USERS.length + " user(s) found.";
+            renderUsersAdmin();
+        } catch (e) { setUsersMsg('Could not load users: ' + (e.message || e)); }
+    }
+    function renderUsersAdmin() {
+        const tb = document.getElementById('usersBody'); if (!tb) return;
+        const q = (document.getElementById('userSearch').value || "").toLowerCase(); tb.innerHTML = "";
+        const list = USERS.filter(u => u.id.toLowerCase().includes(q));
+        if (!list.length) { tb.innerHTML = '<tr><td colspan="4" style="padding:24px;text-align:center;color:var(--text-muted);">No users found.</td></tr>'; return; }
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        list.forEach(u => {
+            const tr = document.createElement('tr');
+            const exp = u.expiry ? new Date(u.expiry) : null, days = exp ? Math.ceil((exp - today) / 86400000) : null;
+            const st = u.disabled ? ['Disabled', 'status-dropped'] : (days !== null && days < 0) ? ['Expired', 'status-dropped'] : ['Active', 'status-selected'];
+            const c1 = document.createElement('td'); const b = document.createElement('strong'); b.textContent = u.id; c1.appendChild(b);
+            const c2 = document.createElement('td');
+            c2.innerHTML = '<span class="status-badge ' + st[1] + '">' + st[0] + '</span><div style="margin-top:6px;"><input type="date" class="form-control" style="padding:6px 8px;font-size:12px;"></div><div style="font-size:11px;color:var(--text-muted);margin-top:4px;">' + (days === null ? '' : (days < 0 ? 'Expired ' + (-days) + ' days ago' : days + ' days left')) + '</div>';
+            const di = c2.querySelector('input'); di.value = u.expiry || '';
+            const c3 = document.createElement('td'); const chk = {};
+            PERM_DEFS.forEach(([k, label]) => {
+                const l = document.createElement('label'); l.style.cssText = 'display:flex;gap:6px;align-items:center;font-size:12px;margin-bottom:4px;cursor:pointer;';
+                const cb = document.createElement('input'); cb.type = 'checkbox'; cb.className = 'checkbox-custom'; cb.checked = !!u.perms[k]; chk[k] = cb;
+                l.appendChild(cb); l.appendChild(document.createTextNode(label)); c3.appendChild(l);
+            });
+            const c4 = document.createElement('td'); c4.style.whiteSpace = 'nowrap';
+            const mk = (t, cls, fn) => { const bt = document.createElement('button'); bt.className = cls; bt.textContent = t; bt.style.cssText = 'margin:2px;padding:6px 10px;font-size:12px;'; bt.onclick = fn; c4.appendChild(bt); };
+            mk('💾 Save', 'btn-action', () => saveUserAccess(u.id, chk, di.value));
+            mk(u.disabled ? '✅ Enable' : '⛔ Disable', 'btn-secondary', () => userOp(u.id, { disabled: !u.disabled }, (u.disabled ? 'enable' : 'disable') + '_user', u.disabled ? 'Enabled: ' + u.id : 'Disabled: ' + u.id));
+            mk('🔑 Reset Pass', 'btn-secondary', () => resetUserPassword(u.id));
+            mk('🗑 Delete', 'btn-secondary', () => deleteUser(u.id));
+            tr.append(c1, c2, c3, c4); tb.appendChild(tr);
+        });
+    }
+    async function userOp(id, data, action, okMsg, detail) {
+        try { await db.collection("subscribers").doc(id).update(data); await logAdmin(action, id, detail || ""); await loadUsersAdmin(); setUsersMsg(okMsg, true); }
+        catch (e) { setUsersMsg('Failed: ' + (e.message || e)); }
+    }
+    function saveUserAccess(id, chk, expiry) {
+        if (!expiry) { alert("Please set an expiry date."); return; }
+        const permissions = {}; PERM_DEFS.forEach(([k]) => permissions[k] = chk[k].checked);
+        userOp(id, { permissions: permissions, expiryDate: expiry }, 'update_access', 'Saved: ' + id, JSON.stringify(permissions) + ' exp:' + expiry);
+    }
+    async function resetUserPassword(id) {   // also migrates old users: creates their Authentication account
+        const p = prompt('New password for "' + id + '" (minimum 8 characters):'); if (!p) return;
+        if (p.length < 8) { alert("Password too short (minimum 8 characters)."); return; }
+        try {
+            const email = newAlias(id);
+            const c = await secAuth.createUserWithEmailAndPassword(email, p); await secAuth.signOut();
+            await db.collection("loginMap").doc(id).set({ email: email });
+            await db.collection("subscribers").doc(id).update({ uid: c.user.uid, email: email, password: firebase.firestore.FieldValue.delete(), salt: firebase.firestore.FieldValue.delete(), hash: firebase.firestore.FieldValue.delete() });
+            await logAdmin('reset_password', id); await loadUsersAdmin(); setUsersMsg('Password changed: ' + id, true);
+        } catch (e) { setUsersMsg('Failed: ' + ((e && (e.code || e.message)) || e)); }
+    }
+    async function deleteUser(id) {
+        if (!confirm('Delete user "' + id + '" permanently? This cannot be undone.')) return;
+        try { await db.collection("subscribers").doc(id).delete(); await db.collection("loginMap").doc(id).delete().catch(() => {}); await logAdmin('delete_user', id); await loadUsersAdmin(); setUsersMsg('Deleted: ' + id, true); }
+        catch (e) { setUsersMsg('Failed: ' + (e.message || e)); }
+    }
+    /* ================= Master Data: Delivery Man & Outlet (per user, synced to Firebase) ================= */
+    const MD = {
+        dm: { map: () => currentDeliveryMap, set: m => { currentDeliveryMap = m; }, store: "dmMap_" },
+        ol: { map: () => currentOutletMap, set: m => { currentOutletMap = m; }, store: "outletMap_" }
+    };
+    let mdType = "dm";
+    const mdBase = () => db.collection("userData").doc(activeClientKey).collection("lists");
+    function setMdStatus(t, ok) { const e = document.getElementById('mdStatus'); if (e) { e.style.color = ok ? 'var(--success)' : 'var(--text-muted)'; e.textContent = t; } }
+    async function cloudSave(type) {
+        setMdStatus("☁ Saving to cloud...");
+        try {
+            const base = mdBase();
+            if (type === "dm") { await base.doc("dm").set({ map: currentDeliveryMap, updated: Date.now() }); }
+            else {
+                const e = Object.entries(currentOutletMap), n = Math.max(1, Math.ceil(e.length / 3000));
+                const old = (await base.doc("meta").get()).data() || {};
+                for (let i = 0; i < n; i++) await base.doc("outlets_" + i).set({ map: Object.fromEntries(e.slice(i * 3000, (i + 1) * 3000)), updated: Date.now() });
+                for (let i = n; i < (old.chunks || 0); i++) await base.doc("outlets_" + i).delete();
+                await base.doc("meta").set({ chunks: n, updated: Date.now() });
+            }
+            setMdStatus("☁ Synced to cloud ✓ (available on every device you log in from)", true);
+        } catch (err) { setMdStatus("⚠ Cloud save failed: " + ((err && (err.code || err.message)) || err) + " — saved on this device only."); }
+    }
+    async function cloudLoad() {
+        try {
+            const base = mdBase(), k = activeClientKey;
+            const dm = await base.doc("dm").get(), meta = await base.doc("meta").get();
+            if (dm.exists) { currentDeliveryMap = dm.data().map || {}; localStorage.setItem("dmMap_" + k, JSON.stringify(currentDeliveryMap)); }
+            else if (localStorage.getItem("dmMap_" + k)) cloudSave("dm");
+            if (meta.exists) {
+                const m = {}; for (let i = 0; i < (meta.data().chunks || 0); i++) { const c = await base.doc("outlets_" + i).get(); if (c.exists) Object.assign(m, c.data().map || {}); }
+                currentOutletMap = m; localStorage.setItem("outletMap_" + k, JSON.stringify(m));
+            } else if (localStorage.getItem("outletMap_" + k)) cloudSave("ol");
+            renderSettingsList();
+            const c = document.getElementById('outletCountDisplay'); if (c) c.innerText = Object.keys(currentOutletMap).length + " Outlets";
+            if (document.getElementById('masterModal').style.display === "flex") mdRender();
+        } catch (e) {}
+    }
+    auth.onAuthStateChanged(u => { if (u && localStorage.getItem('isLoggedIn') === 'true') cloudLoad(); });
+    function openMaster() { if (!can('masterData')) { deny(); return; } closeAllSubmenus(); document.getElementById('masterModal').style.display = "flex"; mdSwitch("dm"); }
+    function closeMaster() { document.getElementById('masterModal').style.display = "none"; }
+    function mdSwitch(t) {
+        mdType = t; document.getElementById('mdBtn_dm').classList.toggle('active', t === 'dm'); document.getElementById('mdBtn_ol').classList.toggle('active', t === 'ol');
+        document.getElementById('mdSearch').value = ""; document.getElementById('mdCode').placeholder = t === 'dm' ? "e.g. 86" : "e.g. C19-05025"; setMdStatus(""); mdRender();
+    }
+    function mdPersist() {
+        localStorage.setItem(MD[mdType].store + activeClientKey, JSON.stringify(MD[mdType].map()));
+        const c = document.getElementById('outletCountDisplay'); if (c) c.innerText = Object.keys(currentOutletMap).length + " Outlets";
+        renderSettingsList(); cloudSave(mdType); mdRender();
+    }
+    function mdRender() {
+        const map = MD[mdType].map(), q = document.getElementById('mdSearch').value.trim().toLowerCase(), tb = document.getElementById('mdBody'); tb.innerHTML = "";
+        const all = Object.keys(map).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+        const rows = all.filter(c => !q || c.toLowerCase().includes(q) || String(map[c]).toLowerCase().includes(q));
+        document.getElementById('mdInfo').textContent = "Total " + all.length + (q ? " · matches " + rows.length : "") + (rows.length > 300 ? " · showing first 300" : "");
+        if (!rows.length) { tb.innerHTML = '<tr><td colspan="3" style="padding:24px;text-align:center;color:var(--text-muted);">No data yet. Add one above or upload a CSV.</td></tr>'; return; }
+        rows.slice(0, 300).forEach(code => {
+            const tr = document.createElement('tr');
+            const c1 = document.createElement('td'); const b = document.createElement('strong'); b.textContent = code; c1.appendChild(b);
+            const c2 = document.createElement('td'); const inp = document.createElement('input'); inp.className = 'form-control'; inp.style.padding = '6px 10px'; inp.value = map[code];
+            inp.onchange = () => { const v = inp.value.trim(); if (v) { map[code] = v; mdPersist(); } else inp.value = map[code]; };
+            c2.appendChild(inp);
+            const c3 = document.createElement('td'); const d = document.createElement('button'); d.className = 'btn-secondary'; d.textContent = '✕'; d.style.padding = '4px 10px';
+            d.onclick = () => { delete map[code]; mdPersist(); }; c3.appendChild(d);
+            tr.append(c1, c2, c3); tb.appendChild(tr);
+        });
+    }
+    function mdAdd() {
+        const c = document.getElementById('mdCode').value.trim(), n = document.getElementById('mdName').value.trim();
+        if (!c || !n) { alert("Enter both code and name."); return; }
+        MD[mdType].map()[c] = n; document.getElementById('mdCode').value = ""; document.getElementById('mdName').value = ""; mdPersist();
+    }
+    function mdUpload(event) {
+        const f = event.target.files[0]; if (!f) return;
+        const type = mdType, r = new FileReader();
+        r.onload = e => {
+            const data = processCSVData(e.target.result), n = Object.keys(data).length;
+            if (!n) { alert("No valid rows found. Use the format: code,name"); return; }
+            Object.assign(MD[type].map(), data); mdType = type; mdPersist(); alert(n + " rows loaded.");
+        };
+        r.readAsText(f, 'UTF-8'); event.target.value = "";
+    }
+    function mdClear() { if (!confirm("Delete ALL " + (mdType === 'dm' ? "delivery man" : "outlet") + " records?")) return; MD[mdType].set({}); mdPersist(); }
+    function mdSample() {
+        const txt = "\uFEFF" + (mdType === 'dm' ? "code,name\n86,Delivery Man One\n7,Delivery Man Two\n" : "code,name\nC19-05025,Sample Store One\nC19-05026,Sample Store Two\n");
+        const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([txt], { type: "text/csv" })); a.download = (mdType === 'dm' ? "delivery_men" : "outlets") + "_sample.csv"; a.click();
+    }
+    /* One-click migration of old users (subscribers with a plain-text "password" field) to Firebase Authentication */
+    async function migrateLegacyUsers() {
+        if (!isSuper()) { deny(); return; }
+        if (!confirm("Migrate old users (plain-text password records) to Firebase Authentication?\n\nTheir current passwords keep working and the plain-text copies are deleted.")) return;
+        setUsersMsg("Migrating users...", true);
+        const ok = [], fail = [];
+        try {
+            const snap = await db.collection("subscribers").get();
+            for (const d of snap.docs) {
+                const x = d.data();
+                if (x.uid || typeof x.password !== "string") continue;
+                const id = d.id.toLowerCase();
+                if (!/^[a-z0-9._-]{3,30}$/.test(id)) { fail.push(d.id + " (ID must be 3-30 chars: a-z 0-9 . - _)"); continue; }
+                if (x.password.length < 6) { fail.push(d.id + " (password under 6 characters: use Reset Pass)"); continue; }
+                try {
+                    const email = newAlias(id);
+                    const c = await secAuth.createUserWithEmailAndPassword(email, x.password); await secAuth.signOut();
+                    await db.collection("loginMap").doc(id).set({ email: email });
+                    await db.collection("subscribers").doc(id).set({ uid: c.user.uid, email: email, expiryDate: x.expiryDate || "", permissions: Object.assign({}, PERM_DEFAULT, x.permissions || {}), disabled: !!x.disabled, createdAt: x.createdAt || Date.now() });
+                    if (id !== d.id) await db.collection("subscribers").doc(d.id).delete();
+                    ok.push(id);
+                } catch (e) { fail.push(d.id + " (" + ((e && (e.code || e.message)) || e) + ")"); }
+            }
+            await logAdmin("migrate_users", "", ok.join(","));
+        } catch (e) { setUsersMsg("Migration failed: " + ((e && (e.code || e.message)) || e)); return; }
+        await loadUsersAdmin();
+        alert("Migrated: " + ok.length + (ok.length ? " (" + ok.join(", ") + ")" : "") + (fail.length ? "\n\nNeed manual Reset Pass:\n" + fail.join("\n") : ""));
+    }
+</script>
+
+</body>
+</html>
