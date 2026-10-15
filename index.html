@@ -728,7 +728,7 @@
     };
 
     firebase.initializeApp(firebaseConfig);
-    /* ---- Password protection: only salted PBKDF2 hashes live in the source (no plain-text passwords) ---- */
+    
     async function pbk(pw, salt) {
         const k = await crypto.subtle.importKey("raw", new TextEncoder().encode(pw), "PBKDF2", false, ["deriveBits"]);
         const b = await crypto.subtle.deriveBits({ name: "PBKDF2", salt: new TextEncoder().encode(salt), iterations: 100000, hash: "SHA-256" }, k, 256);
@@ -736,7 +736,7 @@
     }
     const rndHex = () => Array.from(crypto.getRandomValues(new Uint8Array(12))).map(x => x.toString(16).padStart(2, "0")).join("");
     const CRED_SETTINGS = { salt: "smart-mdm-settings-1", hash: "d39f6479af1b71b118442a619108d02169c9886407c528fdfb979d74c95c2998" };
-    /* ---- Access control: per-user permissions stored in Firebase (subscribers/{id}.permissions) ---- */
+    
     const PERM_DEFS = [["memo", "Memo Processing & Print"], ["masterData", "Master Data: DM & Outlet upload"], ["orderReport", "Order Update Report"], ["settingsConfig", "Settings: System Config"], ["uploadData", "Settings: Data Upload Hub"]];
     const PERM_DEFAULT = { memo: true, masterData: true, orderReport: true, settingsConfig: false, uploadData: false };
     const isSuper = () => (localStorage.getItem('currentUser') || "") === "linux@ubuntu";
@@ -758,7 +758,7 @@
     window.addEventListener('load', refreshMyPerms);
     async function subscriberPassOk(ref, d, pass) {
         if (d.hash && d.salt) return (await pbk(pass, d.salt)) === d.hash;
-        if (d.password !== undefined && d.password === pass) {   // old plain-text record: accept once, then upgrade to hash
+        if (d.password !== undefined && d.password === pass) {   
             try { const salt = rndHex(); await ref.update({ salt: salt, hash: await pbk(pass, salt), password: firebase.firestore.FieldValue.delete() }); } catch (e) {}
             return true;
         }
@@ -766,8 +766,8 @@
     }
     const db = firebase.firestore();
     const auth = firebase.auth();
-    const secAuth = firebase.initializeApp(firebaseConfig, "sec").auth();   // second instance: creates users without logging the admin out
-    auth.onAuthStateChanged(u => {   // session guard: if Firebase session is gone, the app locks
+    const secAuth = firebase.initializeApp(firebaseConfig, "sec").auth();   
+    auth.onAuthStateChanged(u => {   
         if (!u && localStorage.getItem('isLoggedIn') === 'true') {
             ['isLoggedIn','currentUser','subDays','userPerms','isLocalAccount'].forEach(k => localStorage.removeItem(k)); location.reload();
         }
@@ -793,7 +793,6 @@
         }
     };
 
-    // Order Update Report Data & Logic
     const orderReportData = [
         { name: "SHAKHAWAT ULLAH", order: 11320.19, sr: 0.7640, lpc: 1.95, tgt: 1062.53, ach: 348 },
         { name: "Jagadish Karmakar", order: 45174.07, sr: 0.6682, lpc: 1.97, tgt: 872.04, ach: 279 },
@@ -1031,7 +1030,7 @@
         if (!user || !pass) { bad("Enter ID & Password."); return; }
         loginBtn.innerHTML = "⏳ Authenticating..."; loginBtn.disabled = true;
         try {
-            let email = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(user) ? user : toEmail(user);   // a full e-mail also works
+            let email = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(user) ? user : toEmail(user);   
             try { const m = await db.collection("loginMap").doc(user).get(); if (m.exists && m.data().email) email = m.data().email; } catch (e) {}
             const cred = await auth.signInWithEmailAndPassword(email, pass);
             const uid = cred.user.uid;
@@ -1046,19 +1045,16 @@
             startSession(user, false, Math.ceil((expiry - today) / 86400000), data.permissions);
         } catch (error) {
             const c = (error && error.code) || "";
-            bad(/invalid-credential|wrong-password|user-not-found|invalid-email/.test(c) ? "Incorrect ID or Password! (Old passwords no longer work: log in with your Firebase account.)"
-                : /operation-not-allowed/.test(c) ? "Email/Password sign-in is not enabled. Firebase Console → Authentication → Sign-in method → Email/Password → Enable."
-                : /permission-denied/.test(c) ? "Firestore rules blocked access. Publish firestore.rules and check the admins document."
-                : /referer|api-key|app-not-authorized/.test(c) ? "Firebase API key blocks this website. Allow this domain in the API key restrictions."
-                : /too-many/.test(c) ? "Too many attempts. Please try again later."
-                : /network/.test(c) ? "Network error. Check the internet connection."
+            bad(/invalid-credential|wrong-password|user-not-found|invalid-email/.test(c) ? "Incorrect ID or Password!"
+                : /operation-not-allowed/.test(c) ? "Email/Password sign-in is not enabled."
+                : /permission-denied/.test(c) ? "Firestore rules blocked access."
                 : "Login error: " + (c || (error && error.message) || "unknown"));
         } finally { loginBtn.innerHTML = "Log In"; loginBtn.disabled = false; }
     }
 
     function logoutSystem() {
         if(confirm("Log out securely?")) {
-            localStorage.removeItem('isLoggedIn'); localStorage.removeItem('currentUser'); localStorage.removeItem('subDays'); localStorage.removeItem('userPerms'); localStorage.removeItem('isLocalAccount'); auth.signOut();
+            ['isLoggedIn','currentUser','subDays','userPerms','isLocalAccount'].forEach(k => localStorage.removeItem(k)); auth.signOut();
             document.getElementById('appScreen').style.display = "none";
             document.getElementById('loginScreen').style.display = "flex";
             showWelcomeDashboard();
@@ -1071,7 +1067,7 @@
         const pass = document.getElementById('newSubPass').value;
         const expiry = document.getElementById('newSubExpiry').value.trim();
         if (!user || !pass || !expiry) { alert("Fill all fields!"); return; }
-        if (!/^[a-z0-9._-]{3,30}$/.test(user)) { alert("User ID: 3-30 characters, only a-z, 0-9, dot, dash, underscore."); return; }
+        if (!/^[a-z0-9._-]{3,30}$/.test(user)) { alert("User ID: 3-30 characters."); return; }
         if (pass.length < 8) { alert("Password must be at least 8 characters."); return; }
         try {
             if ((await db.collection("subscribers").doc(user).get()).exists) { alert("This User ID already exists."); return; }
@@ -1080,7 +1076,7 @@
             await db.collection("loginMap").doc(user).set({ email: email });
             await db.collection("subscribers").doc(user).set({ uid: c.user.uid, email: email, expiryDate: expiry, permissions: PERM_DEFAULT, disabled: false, createdAt: Date.now() });
             await logAdmin("create_user", user, "exp:" + expiry);
-            alert(`Success! Client ID "${user}" created. Set the access permissions in Clients & Access Control.`);
+            alert(`Success! Client ID "${user}" created.`);
             document.getElementById('newSubUser').value = ""; document.getElementById('newSubPass').value = "";
             loadUsersAdmin();
         } catch (error) { alert("Failed to create user: " + ((error && (error.code || error.message)) || error)); }
@@ -1245,10 +1241,10 @@
     }
     function updateFileCount(files) { document.getElementById('fileCount').innerText = files.length > 0 ? `Selected: ${files.length} PDF file(s).` : ''; }
 
-    /* ------------- 3. Core Engine: PDF + Threshold & Damage Logic ------------- */
+    /* ------------- Updated Core Engine with fixed Memo RegEx ------------- */
     async function processAllPDFs() {
         const files = fileInput.files;
-        if (files.length === 0) { alert("Upload PDF first!"); return; }
+        if (files.length === 0) { alert("দয়া করে প্রথমে পিডিএফ (PDF) ফাইল আপলোড করুন!"); return; }
         document.getElementById('loading').style.display = "block";
         document.getElementById('resultsContainer').style.display = "none";
         document.getElementById('resultsContainer').innerHTML = "";
@@ -1257,10 +1253,12 @@
 
         try {
             for (let f = 0; f < files.length; f++) {
-                document.getElementById('loadingText').innerText = `Scanning File ${f+1}...`;
+                document.getElementById('loadingText').innerText = `স্ক্যান করা হচ্ছে ফাইল ${f+1}...`;
                 let fileCode = files[f].name.replace(/\.[^/.]+$/, "").trim();
                 let engCode = bengaliToEnglish(fileCode);
-                let deliveryMan = currentDeliveryMap[engCode] || `Unknown (${engCode})`;
+                
+                let deliveryMan = currentDeliveryMap[engCode] || `Delivery Group (${engCode})`;
+                
                 const arrayBuffer = await files[f].arrayBuffer();
                 const fileId = `file_${f}`;
                 fileBuffers.push({ id: fileId, bytes: arrayBuffer });
@@ -1282,12 +1280,14 @@
                         let rawAlphaForSearch = blockText.replace(/[^\u0980-\u09FFa-zA-Z]/g, '');
                         let engBlockStr = bengaliToEnglish(blockText).replace(/,/g, '').replace(/(\d)\s*\.\s*(\d)/g, '$1.$2'); 
                         let cleanStrForMemo = engBlockStr.replace(/\s+/g, '');
-                        let memoMatch = cleanStrForMemo.match(/(26000\d{5})/);
+                        
+                        // Updated RegEx to accurately catch 10-digit memos starting with 26
+                        let memoMatch = cleanStrForMemo.match(/(26\d{8})/);
                         let pNum = (cleanStrForMemo.match(/P(\d+)of(\d+)/i) || [0,1])[1];
                         let currentMemoNo = memoMatch ? memoMatch[1] : (pNum > 1 ? lastMemoNo : (engBlockStr.includes("S-SMART") ? "No_Num_" + Math.floor(Math.random()*10000) : lastMemoNo));
                         lastMemoNo = currentMemoNo;
 
-                        let amount = 0.0, isDamage = false, hasPayout = false, hasDecimals = false;
+                        let amount = 0.0, isDamage = false, hasPayout = false;
                         
                         if (rawAlphaForSearch.includes("পেআউট") || rawAlphaForSearch.includes("েপআউট") || rawAlphaForSearch.includes("পআউট") || rawAlphaForSearch.includes("আউট") || /payout/i.test(rawAlphaForSearch) || /p-out/i.test(engBlockStr)) {
                             hasPayout = true;
@@ -1299,7 +1299,6 @@
 
                         let allDecimals = [...engBlockStr.matchAll(/(\d+\.\d{1,2})/g)].map(m => parseFloat(m[1]));
                         if (allDecimals.length > 0) { 
-                            hasDecimals = true; 
                             amount = Math.max(...allDecimals); 
                         }
 
@@ -1340,8 +1339,12 @@
                 });
             });
             renderResultsDCODE();
-        } catch (error) { alert("Processing Error."); }
-        finally { document.getElementById('loading').style.display = "none"; }
+        } catch (error) { 
+            alert("মেমো স্ক্যান করার সময় ত্রুটি ঘটেছে!"); 
+            console.error(error);
+        } finally { 
+            document.getElementById('loading').style.display = "none"; 
+        }
     }
 
     function toggleDMBody(bodyId, iconId) {
@@ -1403,13 +1406,11 @@
                     </div>
                     <div id="${bodyId}" style="display: none; background: #fafafa; border-top: 1px solid var(--border-color);">
                         
-                        <!-- Modern Tab Nav -->
                         <div class="tab-nav">
                             <button class="tab-btn active" id="btn_valid_${dmCounter}" onclick="switchTab(${dmCounter}, 'valid')">Valid & Print Memos (${printable.length})</button>
                             <button class="tab-btn" id="btn_skipped_${dmCounter}" onclick="switchTab(${dmCounter}, 'skipped')">Skipped Memos List (${skipped.length})</button>
                         </div>
 
-                        <!-- Tab 1: Valid & Print Memos (Modernized Design) -->
                         <div id="tab_valid_${dmCounter}" class="tab-content active">
                             <div class="modern-table-container">
                                 <div class="modern-table-toolbar">
@@ -1450,7 +1451,6 @@
             }
             html += `</tbody></table></div></div>`;
 
-            // Tab 2: Skipped Memos List (Modernized Design)
             html += `
                         <div id="tab_skipped_${dmCounter}" class="tab-content">
                             <div class="modern-table-container">
@@ -1529,7 +1529,6 @@
         } catch (error) { alert("Print Error!"); btnElement.innerHTML = origText; btnElement.disabled = false; }
     }
 
-    /* ================= Admin: users & access control ================= */
     let USERS = [];
     function setUsersMsg(t, ok) { const m = document.getElementById('usersMsg'); if (!m) return; m.style.color = ok ? 'var(--success)' : 'var(--danger)'; m.textContent = t; }
     async function loadUsersAdmin() {
@@ -1580,7 +1579,7 @@
         const permissions = {}; PERM_DEFS.forEach(([k]) => permissions[k] = chk[k].checked);
         userOp(id, { permissions: permissions, expiryDate: expiry }, 'update_access', 'Saved: ' + id, JSON.stringify(permissions) + ' exp:' + expiry);
     }
-    async function resetUserPassword(id) {   // also migrates old users: creates their Authentication account
+    async function resetUserPassword(id) {   
         const p = prompt('New password for "' + id + '" (minimum 8 characters):'); if (!p) return;
         if (p.length < 8) { alert("Password too short (minimum 8 characters)."); return; }
         try {
@@ -1592,11 +1591,11 @@
         } catch (e) { setUsersMsg('Failed: ' + ((e && (e.code || e.message)) || e)); }
     }
     async function deleteUser(id) {
-        if (!confirm('Delete user "' + id + '" permanently? This cannot be undone.')) return;
+        if (!confirm('Delete user "' + id + '" permanently?')) return;
         try { await db.collection("subscribers").doc(id).delete(); await db.collection("loginMap").doc(id).delete().catch(() => {}); await logAdmin('delete_user', id); await loadUsersAdmin(); setUsersMsg('Deleted: ' + id, true); }
         catch (e) { setUsersMsg('Failed: ' + (e.message || e)); }
     }
-    /* ================= Master Data: Delivery Man & Outlet (per user, synced to Firebase) ================= */
+
     const MD = {
         dm: { map: () => currentDeliveryMap, set: m => { currentDeliveryMap = m; }, store: "dmMap_" },
         ol: { map: () => currentOutletMap, set: m => { currentOutletMap = m; }, store: "outletMap_" }
@@ -1616,8 +1615,8 @@
                 for (let i = n; i < (old.chunks || 0); i++) await base.doc("outlets_" + i).delete();
                 await base.doc("meta").set({ chunks: n, updated: Date.now() });
             }
-            setMdStatus("☁ Synced to cloud ✓ (available on every device you log in from)", true);
-        } catch (err) { setMdStatus("⚠ Cloud save failed: " + ((err && (err.code || err.message)) || err) + " — saved on this device only."); }
+            setMdStatus("☁ Synced to cloud ✓", true);
+        } catch (err) { setMdStatus("⚠ Cloud save failed.", false); }
     }
     async function cloudLoad() {
         try {
@@ -1651,7 +1650,7 @@
         const all = Object.keys(map).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
         const rows = all.filter(c => !q || c.toLowerCase().includes(q) || String(map[c]).toLowerCase().includes(q));
         document.getElementById('mdInfo').textContent = "Total " + all.length + (q ? " · matches " + rows.length : "") + (rows.length > 300 ? " · showing first 300" : "");
-        if (!rows.length) { tb.innerHTML = '<tr><td colspan="3" style="padding:24px;text-align:center;color:var(--text-muted);">No data yet. Add one above or upload a CSV.</td></tr>'; return; }
+        if (!rows.length) { tb.innerHTML = '<tr><td colspan="3" style="padding:24px;text-align:center;color:var(--text-muted);">No data yet.</td></tr>'; return; }
         rows.slice(0, 300).forEach(code => {
             const tr = document.createElement('tr');
             const c1 = document.createElement('td'); const b = document.createElement('strong'); b.textContent = code; c1.appendChild(b);
@@ -1673,20 +1672,19 @@
         const type = mdType, r = new FileReader();
         r.onload = e => {
             const data = processCSVData(e.target.result), n = Object.keys(data).length;
-            if (!n) { alert("No valid rows found. Use the format: code,name"); return; }
+            if (!n) { alert("No valid rows found."); return; }
             Object.assign(MD[type].map(), data); mdType = type; mdPersist(); alert(n + " rows loaded.");
         };
         r.readAsText(f, 'UTF-8'); event.target.value = "";
     }
-    function mdClear() { if (!confirm("Delete ALL " + (mdType === 'dm' ? "delivery man" : "outlet") + " records?")) return; MD[mdType].set({}); mdPersist(); }
+    function mdClear() { if (!confirm("Delete ALL records?")) return; MD[mdType].set({}); mdPersist(); }
     function mdSample() {
         const txt = "\uFEFF" + (mdType === 'dm' ? "code,name\n86,Delivery Man One\n7,Delivery Man Two\n" : "code,name\nC19-05025,Sample Store One\nC19-05026,Sample Store Two\n");
         const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([txt], { type: "text/csv" })); a.download = (mdType === 'dm' ? "delivery_men" : "outlets") + "_sample.csv"; a.click();
     }
-    /* One-click migration of old users (subscribers with a plain-text "password" field) to Firebase Authentication */
     async function migrateLegacyUsers() {
         if (!isSuper()) { deny(); return; }
-        if (!confirm("Migrate old users (plain-text password records) to Firebase Authentication?\n\nTheir current passwords keep working and the plain-text copies are deleted.")) return;
+        if (!confirm("Migrate old users to Firebase Authentication?")) return;
         setUsersMsg("Migrating users...", true);
         const ok = [], fail = [];
         try {
@@ -1695,21 +1693,20 @@
                 const x = d.data();
                 if (x.uid || typeof x.password !== "string") continue;
                 const id = d.id.toLowerCase();
-                if (!/^[a-z0-9._-]{3,30}$/.test(id)) { fail.push(d.id + " (ID must be 3-30 chars: a-z 0-9 . - _)"); continue; }
-                if (x.password.length < 6) { fail.push(d.id + " (password under 6 characters: use Reset Pass)"); continue; }
+                if (!/^[a-z0-9._-]{3,30}$/.test(id)) { fail.push(d.id); continue; }
+                if (x.password.length < 6) { fail.push(d.id); continue; }
                 try {
                     const email = newAlias(id);
                     const c = await secAuth.createUserWithEmailAndPassword(email, x.password); await secAuth.signOut();
                     await db.collection("loginMap").doc(id).set({ email: email });
-                    await db.collection("subscribers").doc(id).set({ uid: c.user.uid, email: email, expiryDate: x.expiryDate || "", permissions: Object.assign({}, PERM_DEFAULT, x.permissions || {}), disabled: !!x.disabled, createdAt: x.createdAt || Date.now() });
-                    if (id !== d.id) await db.collection("subscribers").doc(d.id).delete();
+                    await db.collection("subscribers").doc(d.id).set({ uid: c.user.uid, email: email, expiryDate: x.expiryDate || "", permissions: Object.assign({}, PERM_DEFAULT, x.permissions || {}), disabled: !!x.disabled, createdAt: x.createdAt || Date.now() });
                     ok.push(id);
-                } catch (e) { fail.push(d.id + " (" + ((e && (e.code || e.message)) || e) + ")"); }
+                } catch (e) { fail.push(d.id); }
             }
             await logAdmin("migrate_users", "", ok.join(","));
-        } catch (e) { setUsersMsg("Migration failed: " + ((e && (e.code || e.message)) || e)); return; }
+        } catch (e) { setUsersMsg("Migration failed.", false); return; }
         await loadUsersAdmin();
-        alert("Migrated: " + ok.length + (ok.length ? " (" + ok.join(", ") + ")" : "") + (fail.length ? "\n\nNeed manual Reset Pass:\n" + fail.join("\n") : ""));
+        alert("Migrated: " + ok.length);
     }
 </script>
 
